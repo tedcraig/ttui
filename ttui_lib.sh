@@ -63,6 +63,18 @@ readonly TTUI_WBORDER_SINGLE_ROUNDED_LIGHT=()
 readonly TTUI_WBORDER_DOUBLE_SQUARED_LIGHT=()
 readonly TTUI_WBORDER_DOUBLE_SQUARED_HEAVY=()
 
+## horizontal bar
+readonly TTUI_HBAR_8='█'
+readonly TTUI_HBAR_7='▉'
+readonly TTUI_HBAR_6='▊'
+readonly TTUI_HBAR_5='▋'
+readonly TTUI_HBAR_4='▌'
+readonly TTUI_HBAR_3='▍'
+readonly TTUI_HBAR_2='▎'
+readonly TTUI_HBAR_1='▏'
+readonly TTUI_HBAR_0='╳'
+
+
 ## escape codes that can be strung together in a printf statement 
 ## for speed and brevity as an alternative to function calls
 readonly TTUI_SAVE_TERMINAL_SCREEN='\e[?1049h'
