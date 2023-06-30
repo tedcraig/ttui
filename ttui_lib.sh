@@ -62,7 +62,7 @@ TTUI_COLOR_RGB=()
 # 	 * 9. br: character to be used for the bottom right corner of the window
 # 	 */
 readonly TTUI_WBORDER_SINGLE_SQUARED_LIGHT=('│' '│' '─' '─' '┌' '┐' '└' '┘')
-readonly TTUI_WBORDER_SINGLE_SQUARED_HEAVY=()
+readonly TTUI_WBORDER_SINGLE_SQUARED_HEAVY=('║' '║' '═' '═' '╔' '╗' '╚' '╝')
 readonly TTUI_WBORDER_SINGLE_ROUNDED_LIGHT=('│' '│' '─' '─' '╭' '╮' '╰' '╯')
 readonly TTUI_WBORDER_DOUBLE_SQUARED_LIGHT=()
 readonly TTUI_WBORDER_DOUBLE_SQUARED_HEAVY=()
