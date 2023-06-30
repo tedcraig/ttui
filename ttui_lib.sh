@@ -45,6 +45,10 @@ TTUI_CURSOR_VISIBLE=true
 TTUI_LINE_WRAPPING_ENABLED=true
 TTUI_COLOR_RGB=()
 
+
+## Glyphs to use as 'graphics' in the terminal
+## https://www.w3.org/TR/xml-entity-names/025.html
+
 # wborder(local_win, ' ', ' ', ' ',' ',' ',' ',' ',' ');
 # 	/* The parameters taken are 
 # 	 * 1. win: the window on which to operate
@@ -59,7 +63,7 @@ TTUI_COLOR_RGB=()
 # 	 */
 readonly TTUI_WBORDER_SINGLE_SQUARED_LIGHT=('│' '│' '─' '─' '┌' '┐' '└' '┘')
 readonly TTUI_WBORDER_SINGLE_SQUARED_HEAVY=()
-readonly TTUI_WBORDER_SINGLE_ROUNDED_LIGHT=()
+readonly TTUI_WBORDER_SINGLE_ROUNDED_LIGHT=('│' '│' '─' '─' '╭' '╮' '╰' '╯')
 readonly TTUI_WBORDER_DOUBLE_SQUARED_LIGHT=()
 readonly TTUI_WBORDER_DOUBLE_SQUARED_HEAVY=()
 
@@ -782,7 +786,7 @@ ttui::draw_box() {
   count=0
   expand='{1..'"${height}"'}'
   rep="printf '%.0s~\\n' ${expand}"
-  echo "$rep"
+  ttui::logger::log "$rep"
   # # print empty lines to make room
   eval "${rep}"
   # printf "${rep}"
@@ -810,9 +814,8 @@ ttui::draw_box() {
   # top right corner
   printf "${top_right_corner}"
 
-  local height_counter=1
-
-  printf " ${height_counter}"
+  # local height_counter=1
+  # printf " ${height_counter}"
 
   # left and right sides
   for (( r=1; r<=height - 2; r++ )); do 
@@ -821,8 +824,8 @@ ttui::draw_box() {
     printf "${left_side}"
     ttui::cursor::move_right $((width - 2))
     printf "${right_side}"
-    ((++height_counter))
-    printf " ${height_counter}"
+    # ((++height_counter))
+    # printf " ${height_counter}"
   done
   
   ttui::cursor::move_down
@@ -838,8 +841,8 @@ ttui::draw_box() {
   # bottom right corner
   printf "${bottom_right_corner}"
   
-  ((++height_counter))
-  printf " ${height_counter}"
+  # ((++height_counter))
+  # printf " ${height_counter}"
 
   echo
 
@@ -1230,13 +1233,13 @@ ttui::handle_exit() {
   
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   
-  echo "${FUNCNAME[0]} --> cleaning up before exit"
+  ttui::logger::log  "cleaning up before exit"
   
   # ttui::color::reset
-  echo "TTUI_SCROLL_AREA_CHANGED: ${TTUI_SCROLL_AREA_CHANGED}"
+  ttui::logger::log  "TTUI_SCROLL_AREA_CHANGED: ${TTUI_SCROLL_AREA_CHANGED}"
   [[ $TTUI_SCROLL_AREA_CHANGED == true ]] && ttui::restore_scroll_area
 
-  echo "TTUI_SHOULD_USE_WHOLE_TERM_WINDOW: ${TTUI_SHOULD_USE_WHOLE_TERM_WINDOW}"
+  ttui::logger::log  "TTUI_SHOULD_USE_WHOLE_TERM_WINDOW: ${TTUI_SHOULD_USE_WHOLE_TERM_WINDOW}"
   [[ $TTUI_SHOULD_USE_WHOLE_TERM_WINDOW == true ]] && ttui::restore_terminal_screen
   
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
