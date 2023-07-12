@@ -23,13 +23,26 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Path Vars
+# -----------------------------------------------------------------------------
+# readonly FULL_PATH_TO_SCRIPT="$(which "$0")"  #/path/filename
+# readonly PATH_TO_SCRIPT="$(dirname "$0")"     #/path
+# readonly BASENAME="$(basename "$0")"          #filename
+readonly TTUI_PATH=$(dirname "${BASH_SOURCE[0]}") # get full path to this file and strip the filename from it
+# echo "TTUI_PATH: ${TTUI_PATH}"
+
+
+# -----------------------------------------------------------------------------
 # Imports
 # -----------------------------------------------------------------------------
-source ./enum_builder.sh
+source "${TTUI_PATH}/Enum_builder.sh"
+source "${TTUI_PATH}/Window.sh"
 
 # -----------------------------------------------------------------------------
 # Global Vars
 # -----------------------------------------------------------------------------
+TTUI_LOADED=false
+
 readonly TIMESTAMP_AT_LAUNCH=`date +"%Y-%m-%d %T"`
 TTUI_THIS_IS_FIRST_LOG=true
 
@@ -1252,3 +1265,4 @@ ttui::handle_exit() {
   ttui::logger::log "Exiting at ${TIMESTAMP_AT_EXIT}"
 }
 
+TTUI_LOADED=true
