@@ -11,7 +11,7 @@
 #   acknowledgment: code more or less lifted from Zhro
 #                   https://stackoverflow.com/questions/21849328/enum-data-type-seems-not-available-in-bash
 #
-#   NOTE:   This implementation uses 'eval'
+#   NOTE:   This implementation uses 'eval' -- eek!
 #
 # -----------------------------------------------------------------------------
 #
@@ -24,7 +24,7 @@
 #      CONFIRM_INDEX
 #      SAVE_INDEX
 #      EXIT_INDEX
-#   ) && _enum "${ENUM[@]}"
+#   ) && build_enum "${ENUM[@]}"
 #   
 #   echo "OK_INDEX = "$OK_INDEX
 #   echo "CANCEL_INDEX = "$CANCEL_INDEX
@@ -45,10 +45,6 @@
 # =============================================================================
 function build_enum()
 {
-  ## void
-  ## (
-  ##    _IN $@ : [ array<string> ] list
-  ## )
   local list=("$@")
   local len=${#list[@]}
   for (( i=0; i < $len; i++ )); do
