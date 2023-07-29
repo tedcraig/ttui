@@ -315,6 +315,11 @@ ttui::clear_screen() {
 #   None
 # -----------------------------------------------------------------------------
 ttui::get_term_size() {
+  local should_print=false
+  
+  [[ $# -gt 0 ]] && [[ "$1" == "print" ]] && {
+    should_print=true
+  }
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   # '\e7':           Save the current cursor position.
   # '\e[9999;9999H': Move the cursor to the bottom right corner.
@@ -322,6 +327,45 @@ ttui::get_term_size() {
   # '\e8':           Restore the cursor to its previous position.
   IFS='[;' read -p $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ TTUI_TERM_LINES TTUI_TERM_COLUMNS
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
+  [[ "${should_print}" == "true" ]] && {
+    echo "${TTUI_TERM_LINES} ${TTUI_TERM_COLUMNS}"
+  }
+}
+
+
+# -----------------------------------------------------------------------------
+# Get the current width (number of columns) of the terminal
+# Globals:
+#   TTUI_TERM_COLUMNS
+# Function Calls:
+#   ttui::get_term_size
+# Arguments:
+#   $1) force - if string "force" is received, get_term_size will be called
+#               before echoing result
+# -----------------------------------------------------------------------------
+ttui::get_term_width() {
+  [[ "$1" == "force" ]] && {
+    ttui::get_term_size
+  }
+  echo "${TTUI_TERM_COLUMNS}"
+}
+
+
+# -----------------------------------------------------------------------------
+# Get the current height (number of lines) of the terminal
+# Globals:
+#   TTUI_TERM_LINES
+# Function Calls:
+#   ttui::get_term_size
+# Arguments:
+#   $1) force - if string "force" is received, get_term_size will be called
+#               before echoing result
+# -----------------------------------------------------------------------------
+ttui::get_term_height() {
+  [[ "$1" == "force" ]] && {
+    ttui::get_term_size
+  }
+  echo "${TTUI_TERM_LINES}"
 }
 
 
@@ -575,6 +619,42 @@ ttui::cursor::get_position() {
 
 
 # -----------------------------------------------------------------------------
+# Get the column number on which the cursor currently resides
+# Globals:
+#   TTUI_CURRENT_COLUMN
+# Function Calls:
+#   ttui::cursor::get_position
+# Arguments:
+#   $1) force - if string "force" is received, cursor::get_position will be called
+#               before echoing result
+# -----------------------------------------------------------------------------
+ttui::cursor::get_column() {
+  [[ "$1" == "force" ]] && {
+    ttui::cursor::get_position
+  }
+  echo "${TTUI_CURRENT_COLUMN}"
+}
+
+
+# -----------------------------------------------------------------------------
+# Get the line number on which the cursor currently resides
+# Globals:
+#   TTUI_CURRENT_LINE
+# Function Calls:
+#   ttui::cursor::get_position
+# Arguments:
+#   $1) force - if string "force" is received, cursor::get_position will be called
+#               before echoing result
+# -----------------------------------------------------------------------------
+ttui::cursor::get_line() {
+  [[ "$1" == "force" ]] && {
+    ttui::cursor::get_position
+  }
+  echo "${TTUI_CURRENT_LINE}"
+}
+
+
+# -----------------------------------------------------------------------------
 # Moves cursor to the specified line and column.
 # Globals:
 #   TBD
@@ -586,15 +666,30 @@ ttui::cursor::move_to() {
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   ttui::logger::log "$# arguments received"
   ttui::logger::log "arg \$1: $1 | \$2: $2"
+  
+  local LINE_NUMBER=$1
+  local COLUMN_NUMBER=$2
+  
   # See: https://vt100.net/docs/vt510-rm/CUP.html
-  # Move the cursor to 0,0.
-  #   printf '\e[H'
-  # Move the cursor to line 3, column 10.
-  #   printf '\e[3;10H'
-  #   printf '\e[%s;%sH]' "${line_number}" "${column_number}"
-  # Move the cursor to line 5.
-  #   printf '\e[5H'
-  #   printf '\e[%sH]' "${line_number}"
+  
+  [[ $# == 0 ]] && {
+    # Move the cursor to 0,0.
+    printf '\e[H'
+    return 0
+  }
+
+  ## TODO: validate that LINE_NUMBER value is actually an integer
+  [[ $# == 1 ]] && {
+    # Move the cursor to specified line number.
+    printf '\e[%sH]' "${LINE_NUMBER}"  
+  }
+
+  ## TODO: validate that LINE_NUMBER & COLUMN_NUMBER value are actually integers
+  [[ $# -gt 1 ]] && {
+    # Move the cursor to specified line and column.
+    printf '\e[%s;%sH]' "${LINE_NUMBER}" "${COLUMN_NUMBER}"
+  }
+  
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
 
@@ -760,6 +855,11 @@ ttui::draw_box() {
   ttui::logger::log "width:  ${width}"
   local height="$2"
   ttui::logger::log "height: ${height}"
+  local anchor_column="$3" || anchor_column=0 # need to check this syntax
+  ttui::logger::log "anchor_column: ${anchor_column}"
+  local anchor_line="$4"
+  ttui::logger::log "anchor_line: ${anchor_line}"
+
   local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
   ttui::logger::log "left_side:            ${left_side}"
   local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
@@ -802,7 +902,7 @@ ttui::draw_box() {
   # echo "-------------------- 20"
   count=0
   expand='{1..'"${height}"'}'
-  rep="printf '%.0s~\\n' ${expand}"
+  rep="printf '%.0s\\n' ${expand}"
   ttui::logger::log "$rep"
   # # print empty lines to make room
   eval "${rep}"
@@ -820,7 +920,9 @@ ttui::draw_box() {
   # printf "%s" "/n"
   echo
   ttui::cursor::move_up $((height + 1))
+  # ttui::cursor::move_left 999
 
+  ttui::cursor::move_right "${anchor_column}"
   # top left corner
   printf "${top_left_corner}"
 
@@ -837,7 +939,8 @@ ttui::draw_box() {
   # left and right sides
   for (( r=1; r<=height - 2; r++ )); do 
     ttui::cursor::move_down
-    ttui::cursor::move_left $((width + 2))
+    # ttui::cursor::move_left $((width + 2))
+    ttui::cursor::move_left $((width))
     printf "${left_side}"
     ttui::cursor::move_right $((width - 2))
     printf "${right_side}"
@@ -846,10 +949,14 @@ ttui::draw_box() {
   done
   
   ttui::cursor::move_down
-  ttui::cursor::move_left $((width + 2))
+  # ttui::cursor::move_left $((width + 2))
+  ttui::cursor::move_left $((width))
 
   # bottom left corner
   printf "${bottom_left_corner}"
+  ttui::cursor::move_left
+  local curr_col="$(ttui::cursor::get_column force)"
+  echo -n "${curr_col}"
 
   # repeat bottom char width - 2 times (to account for corners)
   printf -vch  "%$((width - 2))s" ""
@@ -1242,6 +1349,7 @@ ttui::initialize() {
   echo "${FUNCNAME[0]} --> initializing"
   echo "TTUI_SHOULD_USE_WHOLE_TERM_WINDOW: ${TTUI_SHOULD_USE_WHOLE_TERM_WINDOW}"
   [[ TTUI_SHOULD_USE_WHOLE_TERM_WINDOW == true ]] && ttui::save_terminal_screen
+  ttui::get_term_size
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
 
