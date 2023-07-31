@@ -84,6 +84,8 @@ readonly TTUI_WBORDER_SINGLE_ROUNDED_LIGHT=('│' '│' '─' '─' '╭' '╮' 
 readonly TTUI_WBORDER_DOUBLE_SQUARED_LIGHT=()
 readonly TTUI_WBORDER_DOUBLE_SQUARED_HEAVY=()
 
+readonly TTUI_HORIZONTAL_RULER_TICK='│'
+
 ## horizontal bar
 readonly TTUI_HBAR_8='█'
 readonly TTUI_HBAR_7='▉'
@@ -681,13 +683,13 @@ ttui::cursor::move_to() {
   ## TODO: validate that LINE_NUMBER value is actually an integer
   [[ $# == 1 ]] && {
     # Move the cursor to specified line number.
-    printf '\e[%sH]' "${LINE_NUMBER}"  
+    printf '\e[%sH' "${LINE_NUMBER}"  
   }
 
   ## TODO: validate that LINE_NUMBER & COLUMN_NUMBER value are actually integers
   [[ $# -gt 1 ]] && {
     # Move the cursor to specified line and column.
-    printf '\e[%s;%sH]' "${LINE_NUMBER}" "${COLUMN_NUMBER}"
+    printf '\e[%s;%sH' "${LINE_NUMBER}" "${COLUMN_NUMBER}"
   }
   
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
@@ -829,6 +831,42 @@ ttui::cursor::move_to_home() {
 
 
 # -----------------------------------------------------------------------------
+# 
+# Globals:
+#   TBD
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+ttui::draw_horizontal_ruler() {
+
+  # local TERM_WIDTH=$(ttui::get_term_width force)
+  # local counter=10
+  # for ((i=0; i < TERM_WIDTH; i++)); do
+  #   if [[ ${counter} < 10 ]]; then
+  #     echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+  #     (( counter++ ))
+  #   else
+  #     echo -n "${i}"
+  #     counter=0
+  #   fi
+  # done
+
+  local TERM_WIDTH=$(ttui::get_term_width force)
+  local counter=1
+  for ((i=0; i < TERM_WIDTH; i++)); do
+    if [[ ${counter} == 10 ]]; then
+      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+      counter=1
+    else
+      echo -n ' '
+      (( counter++ ))
+    fi
+  done
+  echo
+
+}
+
+# -----------------------------------------------------------------------------
 # Draws box of specified width and height from specified upper left point
 # Globals:
 #   TBD
@@ -855,10 +893,17 @@ ttui::draw_box() {
   ttui::logger::log "width:  ${width}"
   local height="$2"
   ttui::logger::log "height: ${height}"
-  local anchor_column="$3" || anchor_column=0 # need to check this syntax
+  # local initial_columm=$(ttui::cursor::get_column force)
+  local anchor_column=$(ttui::cursor::get_column force)
+    [[ $# -gt 2 ]] && {
+      anchor_column=$3
+    }
   ttui::logger::log "anchor_column: ${anchor_column}"
   local anchor_line="$4"
   ttui::logger::log "anchor_line: ${anchor_line}"
+
+  local current_column=
+  local current_line=
 
   local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
   ttui::logger::log "left_side:            ${left_side}"
@@ -900,7 +945,8 @@ ttui::draw_box() {
   # local adjusted_width=$((width - 20))
   # echo "adjusted_width: ${adjusted_width}"
   # echo "-------------------- 20"
-  count=0
+  
+  # local count=0
   expand='{1..'"${height}"'}'
   rep="printf '%.0s\\n' ${expand}"
   ttui::logger::log "$rep"
@@ -922,7 +968,8 @@ ttui::draw_box() {
   ttui::cursor::move_up $((height + 1))
   # ttui::cursor::move_left 999
 
-  ttui::cursor::move_right "${anchor_column}"
+  current_line=$(ttui::cursor::get_line force)
+  ttui::cursor::move_to "${current_line}" "${anchor_column}"
   # top left corner
   printf "${top_left_corner}"
 
@@ -938,9 +985,11 @@ ttui::draw_box() {
 
   # left and right sides
   for (( r=1; r<=height - 2; r++ )); do 
-    ttui::cursor::move_down
+    # ttui::cursor::move_down
     # ttui::cursor::move_left $((width + 2))
-    ttui::cursor::move_left $((width))
+    # ttui::cursor::move_left $((width))
+    (( current_line++ ))
+    ttui::cursor::move_to "${current_line}" "${anchor_column}"
     printf "${left_side}"
     ttui::cursor::move_right $((width - 2))
     printf "${right_side}"
@@ -948,15 +997,17 @@ ttui::draw_box() {
     # printf " ${height_counter}"
   done
   
-  ttui::cursor::move_down
+  # ttui::cursor::move_down
+  (( current_line++ ))
   # ttui::cursor::move_left $((width + 2))
-  ttui::cursor::move_left $((width))
+  # ttui::cursor::move_left $((width))
+  ttui::cursor::move_to "${current_line}" "${anchor_column}"
 
   # bottom left corner
   printf "${bottom_left_corner}"
-  ttui::cursor::move_left
-  local curr_col="$(ttui::cursor::get_column force)"
-  echo -n "${curr_col}"
+  # ttui::cursor::move_left
+  # local curr_col="$(ttui::cursor::get_column force)"
+  # echo -n "${curr_col}"
 
   # repeat bottom char width - 2 times (to account for corners)
   printf -vch  "%$((width - 2))s" ""
