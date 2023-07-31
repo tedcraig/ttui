@@ -867,11 +867,21 @@ ttui::draw_horizontal_ruler() {
 }
 
 # -----------------------------------------------------------------------------
-# Draws box of specified width and height from specified upper left point
+# Draws box of specified width and height at the current cursor location 
+# or from specified anchor point.
 # Globals:
-#   TBD
+#   ttui::cursor::get_column()
+#   ttui::cursor::get_line()
+#   ttui::cursor::move_right()
+#   ttui::cursor::move_to()
+#   ttui::cursor::move_up()
+#   ttui::logger::log()
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
 # Arguments:
-#   TBD
+#   $1  : width of box  (including border)
+#   $2  : height of box (including border)
+#  [$3] : anchor column (upper left corner location)
+#  [$4] : anchor line   (upper left corner location)
 # -----------------------------------------------------------------------------
 ttui::draw_box() {
   # width, height, upperLeftX, upperLeftY
@@ -880,53 +890,61 @@ ttui::draw_box() {
   local expanded_args=$(echo "$@")
   ttui::logger::log "args received: $expanded_args"
 
-  # wborder params
-  # 	0. ls: character to be used for the left side of the window 
-  # 	1. rs: character to be used for the right side of the window 
-  # 	2. ts: character to be used for the top side of the window 
-  # 	3. bs: character to be used for the bottom side of the window 
-  # 	4. tl: character to be used for the top left corner of the window 
-  # 	5. tr: character to be used for the top right corner of the window 
-  # 	6. bl: character to be used for the bottom left corner of the window 
-  # 	7. br: character to be used for the bottom right corner of the window
   local width="$1"
   ttui::logger::log "width:  ${width}"
+
   local height="$2"
   ttui::logger::log "height: ${height}"
-  # local initial_columm=$(ttui::cursor::get_column force)
+
   local anchor_column=$(ttui::cursor::get_column force)
     [[ $# -gt 2 ]] && {
       anchor_column=$3
     }
   ttui::logger::log "anchor_column: ${anchor_column}"
-  local anchor_line="$4"
+
+  local anchor_line=$(ttui::cursor::get_line) # no need for 'force' here since we already forced get_column
+    [[ $# -gt 3 ]] && {
+      anchor_line="$4"
+    }
   ttui::logger::log "anchor_line: ${anchor_line}"
 
   local current_column=
   local current_line=
 
-  local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
-  ttui::logger::log "left_side:            ${left_side}"
-  local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
-  ttui::logger::log "right_side:           ${right_side}"
-  local top_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
-  ttui::logger::log "top_side:             ${top_side}"
-  local bottom_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
-  ttui::logger::log "bottom_side:          ${bottom_side}"
-  local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
-  ttui::logger::log "top_left_corner:      ${top_left_corner}"
-  local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
-  ttui::logger::log "top_right_corner:     ${top_right_corner}"
-  local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
-  ttui::logger::log "bottom_left_corner:   ${bottom_left_corner}"
-  local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
-  ttui::logger::log "bottom_right_corner:  ${bottom_right_corner}"
-  ttui::logger::log "box sample:"
-  ttui::logger::log "${top_left_corner}${top_side}${top_side}${top_side}${top_side}${top_side}${top_side}${top_right_corner}"
-  ttui::logger::log "${left_side}      ${right_side}"
-  ttui::logger::log "${left_side}      ${right_side}"
-  ttui::logger::log "${bottom_left_corner}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_right_corner}"
+  ## wborder params
+  ## 	0. ls: character to be used for the left side of the window 
+  ## 	1. rs: character to be used for the right side of the window 
+  ## 	2. ts: character to be used for the top side of the window 
+  ## 	3. bs: character to be used for the bottom side of the window 
+  ## 	4. tl: character to be used for the top left corner of the window 
+  ## 	5. tr: character to be used for the top right corner of the window 
+  ## 	6. bl: character to be used for the bottom left corner of the window 
+  ## 	7. br: character to be used for the bottom right corner of the window
 
+  local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
+  local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
+  local top_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
+  local bottom_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
+  local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+  local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+  local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+  local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
+  
+  ## dev debug stuff
+
+  # ttui::logger::log "left_side:            ${left_side}"
+  # ttui::logger::log "right_side:           ${right_side}"
+  # ttui::logger::log "top_side:             ${top_side}"
+  # ttui::logger::log "bottom_side:          ${bottom_side}"
+  # ttui::logger::log "top_left_corner:      ${top_left_corner}"
+  # ttui::logger::log "top_right_corner:     ${top_right_corner}"
+  # ttui::logger::log "bottom_left_corner:   ${bottom_left_corner}"
+  # ttui::logger::log "bottom_right_corner:  ${bottom_right_corner}"
+  # ttui::logger::log "box sample:"
+  # ttui::logger::log "${top_left_corner}${top_side}${top_side}${top_side}${top_side}${top_side}${top_side}${top_right_corner}"
+  # ttui::logger::log "${left_side}      ${right_side}"
+  # ttui::logger::log "${left_side}      ${right_side}"
+  # ttui::logger::log "${bottom_left_corner}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_right_corner}"
 
   # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
   # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
@@ -935,38 +953,16 @@ ttui::draw_box() {
   # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
   # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
   # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
-
-  # printf '%s' "$1"
-  # echo
-  # printf '%s' "${top}"
-  # echo
-  # printf '~%.0s' {1..5}; printf '\n'
-  # printf "${top}"'%.0s' {1..10}
-  # local adjusted_width=$((width - 20))
-  # echo "adjusted_width: ${adjusted_width}"
-  # echo "-------------------- 20"
   
-  # local count=0
+  ## insert mode:
+  ## print empty lines to make room
   expand='{1..'"${height}"'}'
   rep="printf '%.0s\\n' ${expand}"
   ttui::logger::log "$rep"
-  # # print empty lines to make room
   eval "${rep}"
-  # printf "${rep}"
 
-
-  # for (( r=1; r<=height; r++ )); do 
-  #   ((count++))
-  #   # printf "${count} \n"
-  #   printf "\n"
-  # done
-
-  # printf -vch  "%$((height))s" ""
-  # # printf "%s" "${ch// /n}"
-  # printf "%s" "/n"
   echo
   ttui::cursor::move_up $((height + 1))
-  # ttui::cursor::move_left 999
 
   current_line=$(ttui::cursor::get_line force)
   ttui::cursor::move_to "${current_line}" "${anchor_column}"
@@ -985,44 +981,26 @@ ttui::draw_box() {
 
   # left and right sides
   for (( r=1; r<=height - 2; r++ )); do 
-    # ttui::cursor::move_down
-    # ttui::cursor::move_left $((width + 2))
-    # ttui::cursor::move_left $((width))
     (( current_line++ ))
     ttui::cursor::move_to "${current_line}" "${anchor_column}"
     printf "${left_side}"
     ttui::cursor::move_right $((width - 2))
     printf "${right_side}"
-    # ((++height_counter))
-    # printf " ${height_counter}"
   done
-  
-  # ttui::cursor::move_down
+
+  ## move to bottom line of the box  
   (( current_line++ ))
-  # ttui::cursor::move_left $((width + 2))
-  # ttui::cursor::move_left $((width))
   ttui::cursor::move_to "${current_line}" "${anchor_column}"
 
-  # bottom left corner
+  ## draw bottom of box
   printf "${bottom_left_corner}"
-  # ttui::cursor::move_left
-  # local curr_col="$(ttui::cursor::get_column force)"
-  # echo -n "${curr_col}"
-
-  # repeat bottom char width - 2 times (to account for corners)
+  ## repeat bottom char width - 2 times (to account for corners)
   printf -vch  "%$((width - 2))s" ""
   printf "%s" "${ch// /$bottom_side}"
-  
-  # bottom right corner
   printf "${bottom_right_corner}"
-  
-  # ((++height_counter))
-  # printf " ${height_counter}"
-
   echo
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
-
 }
 
 
