@@ -1316,6 +1316,221 @@ ttui::color::get_rgb_from_lch() {
 
 
 # -----------------------------------------------------------------------------
+# *** SLOW-ish !!! ***
+# Converts LCH, specifically CIE-L*Ch°(ab), color values to RGB values. 
+# If optional variable name argument is provided, resulting RGB values will be 
+# assigned as an array (R,G,B) to variable matching the provided name.  If 
+# optional variable name argument is not used then resulting RGB value will be
+# assigned as an array (R,G,B) to global variable TTUI_COLOR_RGB_FROM_LCH.
+# Globals:
+#   TTUI_COLOR_RGB_FROM_LCH
+# Arguments:
+#   position 1:  LCH lightness value (0-100)
+#   position 2:  LCH chroma    value (0-132)
+#   position 3:  LCH hue       value (0-360)
+#  [position 4:] name of existing variable to which result should be assigned
+# -----------------------------------------------------------------------------
+ttui::color::get_rgb_from_lch_faster() {
+  # color conversion equations from:
+  # avisek/colorConversions.js
+  # https://gist.github.com/avisek/eadfbe7a7a169b1001a2d3affc21052e
+  #
+  # checked sanity of results using:
+  # https://www.easyrgb.com/en/convert.php#inputFORM
+  #
+  # LCH color picker:
+  # https://css.land/lch/
+
+  ##########  TODO:
+  ##########  check that args in position 1, 2, 3 are numbers 
+  ##########  and that they are within the legal range for their
+  ##########  respective LCH value:
+  ##########    position 1:  LCH lightness value (0-100)
+  ##########    position 2:  LCH chroma    value (0-132)
+  ##########    position 3:  LCH hue       value (0-360)
+  
+  ##########  TODO:
+  ##########  refactor to reduce awk invocations.
+  ##########  maybe introduce function calls within awk to reduce code repetition
+  ##########  (unless that is less performant)
+  ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
+  ttui::logger::log "$# arguments received"
+  local expanded_args=$(echo "$@")
+  ttui::logger::log "args received: $expanded_args"
+  
+  # assign positional args 1,2,3 as prospective LCH values
+  local LCH_L=$1
+  local LCH_C=$2
+  local LCH_H=$3
+
+  # TODO: validate that 3 numbers have been provided and that they are within legal range
+
+  # isNumber=`eval '[[ '$"${varName}"' =~ ^[+-]?[0-9]+$ ]]'`
+  # if $isNumber; then echo "it's a number!"; else echo "it's not a number"; fi
+
+  # if [[ eval $myVar =~ ^[+-]?[0-9]+$ ]]; then
+  #   echo "Number!" 
+  # elif [[ eval $myVar =~ ^[+-]?[0-9]*\.[0-9]+$ ]]; then
+  #   echo "Float!"
+  # elif [[ eval $myVar =~ [0-9] ]]; then
+  #   echo "Mixed, some numbers"
+  # else
+  #   echo "No numbers!"
+  # fi  
+
+  # echo "${TTUI_INVOKED_DEBUG_MSG}"
+  # echo "$# arguments received"
+  # local expanded_args=$(echo "$@")
+  # echo "args received: $expanded_args"
+ 
+  # echo "lch --> L: $LCH_L | C: $LCH_C | H: $LCH_H"
+
+  ttui::logger::log "lch --> L: $LCH_L | C: $LCH_C | H: $LCH_H"
+
+  ttui::logger::log "converting LCH to RGB..."
+
+  local RGB=`awk -v L=$LCH_L -v C=$LCH_C -v H=$LCH_H 'BEGIN {
+    # convert LCH -> LAB
+    A = cos(H * 0.01745329251) * C;
+    B = sin(H * 0.01745329251) * C;
+    # print "LAB:", L, A, B;
+
+    # convert LAB -> XYZ
+    Y = ( L + 16 ) / 116;
+    X = A / 500 + Y;
+    Z = Y - B / 200;
+
+    Y = (Y ^ 3) > 0.008856 ? Y ^ 3 : (Y - 0.137931034) / 7.787;
+    X = (X ^ 3) > 0.008856 ? X ^ 3 : (X - 0.137931034) / 7.787;
+    Z = (Z ^ 3) > 0.008856 ? Z ^ 3 : (Z - 0.137931034) / 7.787;
+
+    X=95.047 * X;
+    Y=100.000 * Y;
+    Z=108.883 * Z;
+
+    X=X / 100;
+    Y=Y / 100;
+    Z=Z / 100;
+    # print "XYZ:", X, Y, Z;
+
+    # convert XYZ -> RGB
+    R=X * 3.2406 + Y * -1.5372 + Z * -0.4986;
+    G=X * -0.9689 + Y * 1.8758 + Z * 0.0415;
+    B=X * 0.0557 + Y * -0.2040 + Z * 1.0570;
+
+    R=R > 0.0031308 ? 1.055 * (R ^ 0.41666667) - 0.055 : 12.92 * R;
+    G=G > 0.0031308 ? 1.055 * (G ^ 0.41666667) - 0.055 : 12.92 * G;
+    B=B > 0.0031308 ? 1.055 * (B ^ 0.41666667) - 0.055 : 12.92 * B;
+
+    R=255 * R;
+    G=255 * G;
+    B=255 * B;
+    # print "RGB (unclamped):", R, G, B;
+
+    # clamp RGB values to inclusive range 0-255 and force to int value
+    intVal = int(R) 
+    if (R < 0) {
+      R = 0
+    } else if (R > 255) {
+      R = 255
+    } else if (R == intVal ){
+      R = R
+    } else if (R - intVal >= 0.5) {
+      R = intVal + 1
+    } else {
+      R = intVal
+    }; 
+    
+    intVal = int(G) 
+    if (G < 0) {
+      G = 0
+    } else if (G > 255) {
+      G = 255
+    } else if (G == intVal ){
+      G = G
+    } else if (G - intVal >= 0.5) {
+      G = intVal + 1
+    } else {
+      G = intVal
+    }; 
+  
+    intVal = int(B) 
+    if (B < 0) {
+      B = 0
+    } else if (B > 255) {
+      B = 255
+    } else if (B == intVal ){
+      B = B
+    } else if (B - intVal >= 0.5) {
+      B = intVal + 1
+    } else {
+      B = intVal
+    }; 
+    # print "RGB:", R, G, B;
+
+    # result
+    print R, G, B
+    }'`
+
+
+  # test
+  # printf "\033[38;2;%d;%d;%dm$LEVEL_BARS_TOP\n" $RGB_R $RGB_G $RGB_B;
+  # printf "\033[38;2;%d;%d;%dm$LEVEL_BARS_MID\n" $RGB_R $RGB_G $RGB_B;
+  # printf "\033[38;2;%d;%d;%dm$LEVEL_BARS_BOT\n" $RGB_R $RGB_G $RGB_B;
+  # reset color
+  # printf "\033[0m"
+
+
+  # assign RGB values -----------------------------------------------------------
+  #   if option fourth arg exists, then try to assign values to variable of the same name
+  #   else assign values to default global variable
+  RGB_arr=($RGB)
+  # echo "${#RGB_arr}"
+  
+  local RGB_R=${RGB_arr[0]}
+  local RGB_G=${RGB_arr[1]}
+  local RGB_B=${RGB_arr[2]}
+  # echo "rgb --> R: $RGB_R | G: $RGB_G | B: $RGB_B"
+  ttui::logger::log "rgb --> R: $RGB_R | G: $RGB_G | B: $RGB_B"
+
+
+  if [[ $# -gt 3 ]]; then
+    ttui::logger::log "4th arg found: $4"
+    # check if the string value of myVar is the name of a declared variable
+    local varName="$4"
+    # myVar='$'"$4"
+    local bVarExists=false
+    local test='if ${'"${varName}"'+"false"}; then ttui::logger::log "${varName} not defined"; else bVarExists=true; ttui::logger::log "${varName} is defined"; fi'
+    ttui::logger::log "test: $test"
+    eval $test
+    ttui::logger::log  "bVarExists: ${bVarExists}"
+
+    if [[ $bVarExists == true ]]; then
+      local assignment="${varName}"'=($RGB_R $RGB_G $RGB_B)'
+      ttui::logger::log  "assignment: ${assignment}"
+      eval $assignment
+      local toEcho='echo "${varName}: ${'"${varName}"'[@]}"'
+      ttui::logger::log  "toEcho: $toEcho"
+      # eval $toEcho
+      local toLog=`eval $toEcho`
+      ttui::logger::log $toLog
+    else
+      echo "${FUNCNAME[0]} --> warning: cannot assign RGB values to ${varName}: undelcared variable"
+    fi
+  else
+    ttui::logger::log "no var name provided. Assigning to TTUI_COLOR_RGB_FROM_LCH"
+    TTUI_COLOR_RGB_FROM_LCH=($RGB_R $RGB_G $RGB_B)
+    # print result
+    echo "${RGB}"
+
+  fi
+
+  ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
+}
+
+
+
+# -----------------------------------------------------------------------------
 # Sets active color to terminal default.
 # Globals:
 #   none
