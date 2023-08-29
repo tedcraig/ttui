@@ -883,43 +883,6 @@ ttui::draw::horizontal_ruler() {
 
 
 # -----------------------------------------------------------------------------
-# 
-# Globals:
-#   TBD
-# Arguments:
-#   TBD
-# -----------------------------------------------------------------------------
-ttui::draw_horizontal_ruler() {
-
-  # local TERM_WIDTH=$(ttui::get_term_width force)
-  # local counter=10
-  # for ((i=0; i < TERM_WIDTH; i++)); do
-  #   if [[ ${counter} < 10 ]]; then
-  #     echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-  #     (( counter++ ))
-  #   else
-  #     echo -n "${i}"
-  #     counter=0
-  #   fi
-  # done
-
-  local TERM_WIDTH=$(ttui::get_term_width force)
-  local counter=1
-  for ((i=0; i < TERM_WIDTH; i++)); do
-    if [[ ${counter} == 10 ]]; then
-      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-      counter=1
-    else
-      echo -n ' '
-      (( counter++ ))
-    fi
-  done
-  echo
-
-}
-
-
-# -----------------------------------------------------------------------------
 # Draws horizontal line
 # or from specified anchor point.
 # Globals:
@@ -933,16 +896,19 @@ ttui::draw_horizontal_ruler() {
 # Arguments:
 #   TBD
 # -----------------------------------------------------------------------------
-# col#
-# from=here to=col#
-# from=col# to=right len=40
-# inclusive=false (does not draw at current coordinate; starts printing at the next line or column)
+#   col#                        draws from current position to specified col# on current line
+#   from=here to=col#           draws from current position to specified col# on current line
+#   at=line# from=col# to-col#  draws from specified col to specified col at specified line
+#   from=col# to=right len=40   draws from specified col specified length to the right 
+#   inclusive=false             does not draw at current coordinate (starts printing at the next line or column)
 #
 #   ttui::draw::horizontal_line from=here to=42
 # -----------------------------------------------------------------------------
 ttui::draw::horizontal_line() {
   local _dhl_start_col=
   local _dhl_end_col=
+  local _dhl_line=
+  local _dhl_LINE_NOT_SPECIFIED=true
   local _dhl_direction=
   local _dhl_length=
   local _dhl_is_inclusive=true
@@ -962,6 +928,7 @@ ttui::draw::horizontal_line() {
     }
     
     # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    # process props
     local _PROP=${arg%=*}
     local _VAL=${arg#*=}
         
@@ -1021,7 +988,60 @@ ttui::draw::horizontal_line() {
                 ;;
     esac
   done
+
+  [[ $_dhl_LINE_NOT_SPECIFIED == true ]] && {
+    _dhl_line=$(ttui::cursor::get_line)
+  }
+  
+  echo "_dhl_start_col: ........  ${_dhl_start_col}"
+  echo "_dhl_end_col: ..........  ${_dhl_end_col}"
+  echo "_dhl_line: .............  ${_dhl_line}"
+  echo "_dhl_LINE_NOT_SPECIFIED:  ${_dhl_LINE_NOT_SPECIFIED}"
+  echo "_dhl_direction: ........  ${_dhl_direction}"
+  echo "_dhl_length: ...........  ${_dhl_length}"
+  echo "_dhl_is_inclusive: .....  ${_dhl_is_inclusive}"
+
 }
+
+
+# -----------------------------------------------------------------------------
+# 
+# Globals:
+#   TBD
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+ttui::draw_horizontal_ruler() {
+
+  # local TERM_WIDTH=$(ttui::get_term_width force)
+  # local counter=10
+  # for ((i=0; i < TERM_WIDTH; i++)); do
+  #   if [[ ${counter} < 10 ]]; then
+  #     echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+  #     (( counter++ ))
+  #   else
+  #     echo -n "${i}"
+  #     counter=0
+  #   fi
+  # done
+
+  local TERM_WIDTH=$(ttui::get_term_width force)
+  local counter=1
+  for ((i=0; i < TERM_WIDTH; i++)); do
+    if [[ ${counter} == 10 ]]; then
+      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+      counter=1
+    else
+      echo -n ' '
+      (( counter++ ))
+    fi
+  done
+  echo
+
+}
+
+
+
 
 
 ttui::draw::vertical_line() {
