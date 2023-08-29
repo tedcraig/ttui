@@ -7,7 +7,8 @@
 #
 #   desc:   Terminal UI library for Bash.
 #
-#   dependancies:   awk (developed using version 20200816)
+#   dependancies:   awk  (developed using version 20200816)
+#                   perl (developed using version 5.30.3)
 #
 #   acknowledgment: Special thanks to Dylan Araps who has generously shared
 #                   with the world their extensive knowledge of 
@@ -948,7 +949,7 @@ ttui::draw::horizontal_line() {
 
   for arg in "$@"; do
 
-    [[ $# == 1 ]] {
+    [[ $# == 1 ]] && {
       $(ttui::utils::is_unit $arg) && {
         # assume we are moving from current col to a specified col# since no '=' is found
         _dhl_start_col=$(ttui::cursor::get_column)
@@ -1247,6 +1248,8 @@ ttui::color::get_escape_code_for_rgb() {
 # #   position 2:  LCH chroma    value (0-132)
 # #   position 3:  LCH hue       value (0-360)
 # #  [position 4:] name of existing variable to which result should be assigned
+# # Dependancies:
+# #   awk
 # # -----------------------------------------------------------------------------
 # ttui::color::get_rgb_from_lch_old() {
 #   # color conversion equations from:
@@ -1501,6 +1504,9 @@ ttui::color::get_escape_code_for_rgb() {
 #   position 2:  LCH chroma    value (0-132)
 #   position 3:  LCH hue       value (0-360)
 #  [position 4:] name of existing variable to which result should be assigned
+#
+# Dependancies:
+#   awk
 # -----------------------------------------------------------------------------
 ttui::color::get_rgb_from_lch() {
   # color conversion equations from:
@@ -1667,6 +1673,8 @@ ttui::color::get_rgb_from_lch() {
 #   position 2:  Green  value (0-255)
 #   position 3:  Blue   value (0-255)
 #  [position 4:] name of existing variable to which result should be assigned
+# Dependancies:
+#   awk
 # -----------------------------------------------------------------------------
 #     color conversion equations from:
 #     avisek/colorConversions.js
@@ -1879,6 +1887,21 @@ ttui::handle_exit() {
 
   local TIMESTAMP_AT_EXIT=`date +"%Y-%m-%d %T"`
   ttui::logger::log "Exiting at ${TIMESTAMP_AT_EXIT}"
+}
+
+
+# -----------------------------------------------------------------------------
+# prints current epoch time in milliseconds
+# (milliseconds since Unix epoch January 1 1970)
+# Globals:
+#   none
+# Arguments:
+#   none
+# Dependancies:
+#   perl
+# -----------------------------------------------------------------------------
+ttui::utils::epoch_time_ms() {
+  perl -MTime::HiRes -e 'printf("%.0f\n",Time::HiRes::time()*1000)'
 }
 
 
