@@ -475,6 +475,43 @@ ttui::scroll_down() {
 
 
 # -----------------------------------------------------------------------------
+# Clear the current line 
+# Globals:
+#   TBD
+# Arguments:
+#   none
+# -----------------------------------------------------------------------------
+ttui::clear_line() {
+  ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
+
+  # cleareol EL0          Clear line from cursor right           [0K
+  # clearbol EL1          Clear line from cursor left            [1K
+  # clearline EL2         Clear entire line                      [2K
+
+  # if not args, delete entire line
+  [[ $# == 0 ]] && {
+    printf '\e[2K'
+    return
+  }
+  
+  case $1 in
+    "left"|"LEFT")
+      printf '\e[1K'
+      return
+      ;;
+    "right"|"RIGHT")
+      printf '\e[0K'
+      return
+      ;;
+    "whole"|"WHOLE")
+      printf '\e[2K'
+      return
+      ;;
+  esac
+}
+
+
+# -----------------------------------------------------------------------------
 # Hides the cursor
 # Globals:
 #   cursor_visible
@@ -633,9 +670,12 @@ ttui::cursor::get_position() {
 #               before echoing result
 # -----------------------------------------------------------------------------
 ttui::cursor::get_column() {
-  [[ "$1" == "force" ]] && {
-    ttui::cursor::get_position
+  [[ "$1" == "from_cache" ]] && {
+    # return column number stored in global var without updating via ttui::cursor::get_position
+    echo "${TTUI_CURRENT_COLUMN}"
+    return
   }
+  ttui::cursor::get_position # updates global var TTUI_CURRENT_COLUMN
   echo "${TTUI_CURRENT_COLUMN}"
 }
 
@@ -651,9 +691,12 @@ ttui::cursor::get_column() {
 #               before echoing result
 # -----------------------------------------------------------------------------
 ttui::cursor::get_line() {
-  [[ "$1" == "force" ]] && {
-    ttui::cursor::get_position
+  [[ "$1" == "from_cache" ]] && {
+    # return column number stored in global var without updating via ttui::cursor::get_position
+    echo "${TTUI_CURRENT_LINE}"
+    return
   }
+  ttui::cursor::get_position # updates global var TTUI_CURRENT_COLUMN
   echo "${TTUI_CURRENT_LINE}"
 }
 
@@ -832,6 +875,12 @@ ttui::cursor::move_to_home() {
 }
 
 
+# redirect
+ttui::draw::horizontal_ruler() {
+  ttui::draw_horizontal_ruler $@
+}
+
+
 # -----------------------------------------------------------------------------
 # 
 # Globals:
@@ -867,6 +916,124 @@ ttui::draw_horizontal_ruler() {
   echo
 
 }
+
+
+# -----------------------------------------------------------------------------
+# Draws horizontal line
+# or from specified anchor point.
+# Globals:
+#   TBD
+#   ttui::cursor::get_column()
+#   ttui::cursor::get_line()
+#   ttui::cursor::move_right()
+#   ttui::cursor::move_to()
+#   ttui::logger::log()
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+# col#
+# from=here to=col#
+# from=col# to=right len=40
+# inclusive=false (does not draw at current coordinate; starts printing at the next line or column)
+#
+#   ttui::draw::horizontal_line from=here to=42
+# -----------------------------------------------------------------------------
+ttui::draw::horizontal_line() {
+  local _dhl_start_col=
+  local _dhl_end_col=
+  local _dhl_direction=
+  local _dhl_length=
+  local _dhl_is_inclusive=true
+
+  for arg in "$@"; do
+
+    [[ $# == 1 ]] {
+      $(ttui::utils::is_unit $arg) && {
+        # assume we are moving from current col to a specified col# since no '=' is found
+        _dhl_start_col=$(ttui::cursor::get_column)
+        _dhl_end_col="${arg}"
+        break
+      }
+      # if we get this far the arg must not be a unit and therefore invalid
+      # TODO: log or print error
+      break
+    }
+    
+    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    local _PROP=${arg%=*}
+    local _VAL=${arg#*=}
+        
+    case ${_PROP} in
+            from)
+              case $_VAL in
+                here)
+                  _dhl_start_col=$(ttui::cursor::get_column)
+                  ;;
+                *)
+                  $(ttui::utils::is_unit $arg) && {
+                    _dhl_start_col=$arg
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            to) 
+              case $_VAL in
+                left)
+                  _dhl_direction="left"
+                  ;;
+                right)
+                  _dhl_direction="right"
+                  ;;
+                *)
+                  $(ttui::utils::is_unit $arg) && {
+                    _dhl_end_col=$arg
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            length) 
+                $(ttui::utils::is_unit $arg) && {
+                    _dhl_length=$arg
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                ;;
+            inclusive)
+              case $_VAL in
+                true)
+                  _dhl_is_inclusive=true
+                  ;;
+                false)
+                  _dhl_is_inclusive=false
+                  ;;
+                  # TODO: handle unknown value error
+                # *) # handle error
+              esac
+              continue
+              ;;
+            *) echo "Unknown parameter passed: ${_PROP}"
+                # exit 1
+                ;;
+    esac
+  done
+}
+
+
+ttui::draw::vertical_line() {
+  # here to line#
+  # line# to line#
+  echo bash doesnt allow functions with no statements
+}
+
+
+ttui::draw::box() {
+  ttui::draw_box $@
+}
+
 
 # -----------------------------------------------------------------------------
 # Draws box of specified width and height at the current cursor location 
@@ -1470,6 +1637,7 @@ ttui::color::get_rgb_from_lch() {
   # print result
   echo "${RGB}"
 
+
   # convert to array in order to log individual values
   # RGB_arr=($RGB)
   # ttui::logger::log "rgb --> R: ${RGB_arr[0]} | G: ${RGB_arr[1]} | B: ${RGB_arr[2]}"
@@ -1477,7 +1645,9 @@ ttui::color::get_rgb_from_lch() {
   # assign to global var
   TTUI_COLOR_RGB_FROM_LCH=${RGB}
   
-  # echo "TTUI_COLOR_RGB_FROM_LCH: ${TTUI_COLOR_RGB_FROM_LCH[@]}"
+  ttui::logger::log "TTUI_COLOR_RGB_FROM_LCH: ${TTUI_COLOR_RGB_FROM_LCH}"
+
+  
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
@@ -1709,6 +1879,46 @@ ttui::handle_exit() {
 
   local TIMESTAMP_AT_EXIT=`date +"%Y-%m-%d %T"`
   ttui::logger::log "Exiting at ${TIMESTAMP_AT_EXIT}"
+}
+
+
+# -----------------------------------------------------------------------------
+# returns code 1 if arg is an unsigned integer
+# Globals:
+#   none
+# Arguments:
+#   $1) value to be tested
+# -----------------------------------------------------------------------------
+#   Example usage:
+#   
+#   VAR=1000
+#   $(ttui::util::is_uint $VAR) && echo "$VAR is an unsigned integer"
+#   # OUTPUT --> 1000 is an unsigned integer
+#
+#   NUM_ARGS=2
+#   VAR=1234
+#   [[ $NUM_ARGS == 2 ]] && $(ttui::util::is_uint $VAR) && echo "$VAR is an unsigned integer"
+#   # OUTPUT --> 1234 is an unsigned integer
+#
+#   BASH_IS_NIFTY=true
+#   VAR=42
+#   [[ $BASH_IS_NIFTY == true && $(ttui::util::is_uint $VAR) == 1 ]] && echo "$VAR is an unsigned integer"
+#   # OUTPUT --> 42 is an unsigned integer
+#
+#   VAR="blahblah"
+#   if $(is_uint $VAR); then
+#     echo "$VAR is an unsigned integer"
+#   else
+#     echo "$VAR is NOT an unsigned integer"
+#   fi
+#   # OUTPUT --> blahblah is NOT an unsigned integer
+# -----------------------------------------------------------------------------
+ttui::utils::is_uint() { 
+  case $1 in 
+    ''|*[!0-9]*)
+      return 1
+      ;;
+  esac
 }
 
 TTUI_LOADED=true
