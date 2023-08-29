@@ -876,10 +876,29 @@ ttui::cursor::move_to_home() {
 }
 
 
-# redirect
+# -----------------------------------------------------------------------------
+# Draws tick marks as ruler along the horizontal axis
+# Globals:
+#   TTUI_HORIZONTAL_RULER_TICK
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
 ttui::draw::horizontal_ruler() {
-  ttui::draw_horizontal_ruler $@
+  local TERM_WIDTH=$(ttui::get_term_width force)
+  local counter=1
+  for ((i=0; i < TERM_WIDTH; i++)); do
+    if [[ ${counter} == 10 ]]; then
+      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+      counter=1
+    else
+      echo -n ' '
+      (( counter++ ))
+    fi
+  done
+  echo
 }
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -931,15 +950,19 @@ ttui::draw::horizontal_line() {
     # process props
     local _PROP=${arg%=*}
     local _VAL=${arg#*=}
-        
+    echo "$FUNCNAME --> PROP: $_PROP | VAL:$_VAL"
+    echo "is_uint($_VAL): $(ttui::utils::is_uint $_VAL)"
     case ${_PROP} in
             from)
+              echo "prop 'from' found"
               case $_VAL in
                 here)
                   _dhl_start_col=$(ttui::cursor::get_column)
                   ;;
                 *)
-                  $(ttui::utils::is_unit $arg) && {
+                  echo "  should be number"
+                  $(ttui::utils::is_uint $arg) && {
+                    echo "  is a number: $arg"
                     _dhl_start_col=$arg
                   }
                   # TODO: handle error -- value must be unsigned int
@@ -948,6 +971,7 @@ ttui::draw::horizontal_line() {
               continue
               ;;
             to) 
+              echo "prop 'to' found"
               case $_VAL in
                 left)
                   _dhl_direction="left"
@@ -956,7 +980,7 @@ ttui::draw::horizontal_line() {
                   _dhl_direction="right"
                   ;;
                 *)
-                  $(ttui::utils::is_unit $arg) && {
+                  $(ttui::utils::is_uint $arg) && {
                     _dhl_end_col=$arg
                   }
                   # TODO: handle error -- value must be unsigned int
@@ -965,7 +989,7 @@ ttui::draw::horizontal_line() {
               continue
               ;;
             length) 
-                $(ttui::utils::is_unit $arg) && {
+                $(ttui::utils::is_uint $arg) && {
                     _dhl_length=$arg
                   }
                   # TODO: handle error -- value must be unsigned int
@@ -1011,34 +1035,6 @@ ttui::draw::horizontal_line() {
 # Arguments:
 #   TBD
 # -----------------------------------------------------------------------------
-ttui::draw_horizontal_ruler() {
-
-  # local TERM_WIDTH=$(ttui::get_term_width force)
-  # local counter=10
-  # for ((i=0; i < TERM_WIDTH; i++)); do
-  #   if [[ ${counter} < 10 ]]; then
-  #     echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-  #     (( counter++ ))
-  #   else
-  #     echo -n "${i}"
-  #     counter=0
-  #   fi
-  # done
-
-  local TERM_WIDTH=$(ttui::get_term_width force)
-  local counter=1
-  for ((i=0; i < TERM_WIDTH; i++)); do
-    if [[ ${counter} == 10 ]]; then
-      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-      counter=1
-    else
-      echo -n ' '
-      (( counter++ ))
-    fi
-  done
-  echo
-
-}
 
 
 
