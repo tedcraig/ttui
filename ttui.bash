@@ -877,31 +877,6 @@ ttui::cursor::move_to_home() {
 
 
 # -----------------------------------------------------------------------------
-# Draws tick marks as ruler along the horizontal axis
-# Globals:
-#   TTUI_HORIZONTAL_RULER_TICK
-# Arguments:
-#   TBD
-# -----------------------------------------------------------------------------
-ttui::draw::horizontal_ruler() {
-  local TERM_WIDTH=$(ttui::get_term_width force)
-  local counter=1
-  for ((i=0; i < TERM_WIDTH; i++)); do
-    if [[ ${counter} == 10 ]]; then
-      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-      counter=1
-    else
-      echo -n ' '
-      (( counter++ ))
-    fi
-  done
-  echo
-}
-
-
-
-
-# -----------------------------------------------------------------------------
 # Draws horizontal line
 # Globals:
 #   TBD
@@ -924,6 +899,7 @@ ttui::draw::horizontal_line() {
   local end_col=
   local line=
   local LINE_NOT_SPECIFIED=true
+  local use_direction=false
   local direction=
   local length=
   local is_inclusive=true
@@ -973,9 +949,11 @@ ttui::draw::horizontal_line() {
             to) 
               case $VAL in
                 left)
+                  use_direction=true
                   direction="left"
                   ;;
                 right)
+                  use_direction=true
                   direction="right"
                   ;;
                 *)
@@ -1018,6 +996,23 @@ ttui::draw::horizontal_line() {
     line=$(ttui::cursor::get_line)
   }
 
+  [[ $use_direction == true ]] && {
+    if $(ttui::utils::is_uint $length); then
+      if [[ $direction == "right" ]]; then
+        (( end_col = start_col + length ))
+        local TERM_WIDTH=$(ttui::get_term_width)
+        [[ $end_col -gt $TERM_WIDTH ]] && end_col=$TERM_WIDTH
+      else
+        # left
+        (( end_col = start_col - length ))
+        [[ $end_col -lt 1 ]] && end_col=1
+      fi
+    else
+      #error
+      echo "length must be unit"
+    fi
+  }
+
   # draw line
   if [[ end_col -lt start_col ]]; then
     # draw towards left
@@ -1048,6 +1043,30 @@ ttui::draw::horizontal_line() {
   # echo "step: .............  ${step}"
 
 }
+
+
+# -----------------------------------------------------------------------------
+# Draws tick marks as ruler along the horizontal axis
+# Globals:
+#   TTUI_HORIZONTAL_RULER_TICK
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+ttui::draw::horizontal_ruler() {
+  local TERM_WIDTH=$(ttui::get_term_width force)
+  local counter=1
+  for ((i=0; i < TERM_WIDTH; i++)); do
+    if [[ ${counter} == 10 ]]; then
+      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+      counter=1
+    else
+      echo -n ' '
+      (( counter++ ))
+    fi
+  done
+  echo
+}
+
 
 
 # -----------------------------------------------------------------------------
