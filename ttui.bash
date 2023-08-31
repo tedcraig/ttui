@@ -877,221 +877,6 @@ ttui::cursor::move_to_home() {
 
 
 # -----------------------------------------------------------------------------
-# Draws horizontal line
-# Globals:
-#   TBD
-#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
-# Arguments:
-#   TBD
-# -----------------------------------------------------------------------------
-#   col#                        draws from current position to specified col# on current line
-#   from=here to=col#           draws from current position to specified col# on current line
-#   at=line# from=col# to-col#  draws from specified col to specified col at specified line
-#   from=col# to=right len=40   draws from specified col specified length to the right 
-#   inclusive=false             does not draw at current coordinate (starts printing at the next line or column)
-#
-#   ttui::draw::horizontal_line from=here to=42
-# -----------------------------------------------------------------------------
-#   TODO: add support for line weights
-# -----------------------------------------------------------------------------
-ttui::draw::horizontal_line() {
-  local start_col=
-  local end_col=
-  local line=
-  local LINE_NOT_SPECIFIED=true
-  local use_direction=false
-  local direction=
-  local length=
-  local is_inclusive=true
-  local step=1
-
-  for arg in "$@"; do
-
-    [[ $# == 1 ]] && {
-      $(ttui::utils::is_uint $arg) && {
-        # assume we are moving from current col to a specified col# since no '=' is found
-        start_col=$(ttui::cursor::get_column)
-        end_col="${arg}"
-        break
-      }
-      # if we get this far the arg must not be a unit and therefore invalid
-      # TODO: log or print error
-      break
-    }
-    
-    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
-    # process props
-    local PROP=${arg%=*}
-    local VAL=${arg#*=}
-    
-    # echo "$FUNCNAME --> PROP: $PROP | VAL:$VAL"
-    # if $(ttui::utils::is_uint $_VAL); then
-    #   echo "$_VAL is unsigned int"
-    # else
-    #   echo "$_VAL is NOT an unsigned int"
-    # fi
-
-    case ${PROP} in
-            from)
-              case $VAL in
-                here)
-                  start_col=$(ttui::cursor::get_column)
-                  ;;
-                *)
-                  $(ttui::utils::is_uint $VAL) && {
-                    start_col=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                  ;;
-              esac
-              continue
-              ;;
-            to) 
-              case $VAL in
-                left)
-                  use_direction=true
-                  direction="left"
-                  ;;
-                right)
-                  use_direction=true
-                  direction="right"
-                  ;;
-                *)
-                  $(ttui::utils::is_uint $VAL) && {
-                    end_col=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                  ;;
-              esac
-              continue
-              ;;
-            length) 
-                $(ttui::utils::is_uint $VAL) && {
-                    length=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                ;;
-            inclusive)
-              case $VAL in
-                true)
-                  is_inclusive=true
-                  ;;
-                false)
-                  is_inclusive=false
-                  ;;
-                  # TODO: handle unknown value error
-                # *) # handle error
-              esac
-              continue
-              ;;
-            *) echo "Unknown parameter passed: ${PROP}"
-                # exit 1
-                ;;
-    esac
-  done
-
-  # ttui::draw::horizontal_ruler
-
-  [[ $LINE_NOT_SPECIFIED == true ]] && {
-    line=$(ttui::cursor::get_line)
-  }
-
-  [[ $use_direction == true ]] && {
-    if $(ttui::utils::is_uint $length); then
-      if [[ $direction == "right" ]]; then
-        (( end_col = start_col + length ))
-        local TERM_WIDTH=$(ttui::get_term_width)
-        [[ $end_col -gt $TERM_WIDTH ]] && end_col=$TERM_WIDTH
-      else
-        # left
-        (( end_col = start_col - length ))
-        [[ $end_col -lt 1 ]] && end_col=1
-      fi
-    else
-      #error
-      echo "length must be unit"
-    fi
-  }
-
-  # draw line
-  if [[ end_col -lt start_col ]]; then
-    # draw towards left
-    for ((col = $start_col; col >= $end_col; col--)); do
-      ttui::cursor::move_to $line $col
-      printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
-    done
-    
-  else
-    # draw towards right
-    for ((col = $start_col; col <= $end_col; col++)); do
-      ttui::cursor::move_to $line $col
-      printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
-    done
-  fi
-  
-  # place cursor back onto the logical ending position
-  ttui::cursor::move_left 
-  
-  # echo
-  # ttui::cursor::move_down
-  # ttui::cursor::move_left 999
-
-  # echo "start_col: ........  ${start_col}"
-  # echo "end_col: ..........  ${end_col}"
-  # echo "line: .............  ${line}"
-  # echo "LINE_NOT_SPECIFIED:  ${LINE_NOT_SPECIFIED}"
-  # echo "direction: ........  ${direction}"
-  # echo "length: ...........  ${length}"
-  # echo "is_inclusive: .....  ${is_inclusive}"
-  # echo "step: .............  ${step}"
-
-}
-
-
-# -----------------------------------------------------------------------------
-# Draws tick marks as ruler along the horizontal axis
-# Globals:
-#   TTUI_HORIZONTAL_RULER_TICK
-# Arguments:
-#   TBD
-# -----------------------------------------------------------------------------
-ttui::draw::horizontal_ruler() {
-  local TERM_WIDTH=$(ttui::get_term_width force)
-  local counter=1
-  for ((i=0; i < TERM_WIDTH; i++)); do
-    if [[ ${counter} == 10 ]]; then
-      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
-      counter=1
-    else
-      echo -n ' '
-      (( counter++ ))
-    fi
-  done
-  echo
-}
-
-
-
-# -----------------------------------------------------------------------------
-# 
-# Globals:
-#   TBD
-# Arguments:
-#   TBD
-# -----------------------------------------------------------------------------
-ttui::draw::vertical_line() {
-  # here to line#
-  # line# to line#
-  echo bash doesnt allow functions with no statements
-}
-
-
-ttui::draw::box() {
-  ttui::draw_box $@
-}
-
-
-# -----------------------------------------------------------------------------
 # Draws box of specified width and height at the current cursor location 
 # or from specified anchor point.
 # Globals:
@@ -1108,7 +893,7 @@ ttui::draw::box() {
 #  [$3] : anchor column (upper left corner location)
 #  [$4] : anchor line   (upper left corner location)
 # -----------------------------------------------------------------------------
-ttui::draw_box() {
+ttui::draw::box() {
   # width, height, upperLeftX, upperLeftY
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   ttui::logger::log "$# arguments received"
@@ -1226,6 +1011,215 @@ ttui::draw_box() {
   echo
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
+}
+
+
+# -----------------------------------------------------------------------------
+# Draws horizontal line
+# Globals:
+#   TBD
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+#   col#                        draws from current position to specified col# on current line
+#   from=here to=col#           draws from current position to specified col# on current line
+#   at=line# from=col# to-col#  draws from specified col to specified col at specified line
+#   from=col# to=right len=40   draws from specified col specified length to the right 
+#   inclusive=false             does not draw at current coordinate (starts printing at the next line or column)
+#
+#   ttui::draw::horizontal_line from=here to=42
+# -----------------------------------------------------------------------------
+#   TODO: add support for line weights
+#   TODO: refactor line drawing to always be to the right (for simplicity)
+# -----------------------------------------------------------------------------
+ttui::draw::horizontal_line() {
+  local start_col=
+  local end_col=
+  local line=
+  local LINE_NOT_SPECIFIED=true
+  local use_direction=false
+  local direction=
+  local length=
+  local is_inclusive=true
+  local step=1
+
+  for arg in "$@"; do
+
+    [[ $# == 1 ]] && {
+      $(ttui::utils::is_uint $arg) && {
+        # assume we are moving from current col to a specified col# since no '=' is found
+        start_col=$(ttui::cursor::get_column)
+        end_col="${arg}"
+        break
+      }
+      # if we get this far the arg must not be a unit and therefore invalid
+      # TODO: log or print error
+      break
+    }
+    
+    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    # process props
+    local PROP=${arg%=*}
+    local VAL=${arg#*=}
+    
+    # echo "$FUNCNAME --> PROP: $PROP | VAL:$VAL"
+    # if $(ttui::utils::is_uint $_VAL); then
+    #   echo "$_VAL is unsigned int"
+    # else
+    #   echo "$_VAL is NOT an unsigned int"
+    # fi
+
+    case ${PROP} in
+            from)
+              case $VAL in
+                here)
+                  start_col=$(ttui::cursor::get_column)
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    start_col=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            to) 
+              case $VAL in
+                left)
+                  use_direction=true
+                  direction="left"
+                  ;;
+                right)
+                  use_direction=true
+                  direction="right"
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    end_col=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            length) 
+                $(ttui::utils::is_uint $VAL) && {
+                    length=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                ;;
+            inclusive)
+              case $VAL in
+                true)
+                  is_inclusive=true
+                  ;;
+                false)
+                  is_inclusive=false
+                  ;;
+                  # TODO: handle unknown value error
+                # *) # handle error
+              esac
+              continue
+              ;;
+            *) echo "Unknown parameter passed: ${PROP}"
+                # exit 1
+                ;;
+    esac
+  done
+
+  [[ $LINE_NOT_SPECIFIED == true ]] && {
+    line=$(ttui::cursor::get_line)
+  }
+
+  [[ $use_direction == true ]] && {
+    if $(ttui::utils::is_uint $length); then
+      if [[ $direction == "right" ]]; then
+        (( end_col = start_col + length ))
+        local TERM_WIDTH=$(ttui::get_term_width)
+        [[ $end_col -gt $TERM_WIDTH ]] && end_col=$TERM_WIDTH
+      else
+        # left
+        (( end_col = start_col - length ))
+        [[ $end_col -lt 1 ]] && end_col=1
+      fi
+    else
+      #error
+      echo "length must be unsigned int" 2>/dev/null # throwing this away for now
+    fi
+  }
+
+  # draw line
+  if [[ end_col -lt start_col ]]; then
+    # draw towards left
+    for ((col = $start_col; col >= $end_col; col--)); do
+      ttui::cursor::move_to $line $col
+      printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
+    done
+    
+  else
+    # draw towards right
+    for ((col = $start_col; col <= $end_col; col++)); do
+      ttui::cursor::move_to $line $col
+      printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
+    done
+  fi
+  
+  # place cursor back onto the logical ending position
+  ttui::cursor::move_left 
+  
+  # echo
+  # ttui::cursor::move_down
+  # ttui::cursor::move_left 999
+
+  # echo "start_col: ........  ${start_col}"
+  # echo "end_col: ..........  ${end_col}"
+  # echo "line: .............  ${line}"
+  # echo "LINE_NOT_SPECIFIED:  ${LINE_NOT_SPECIFIED}"
+  # echo "direction: ........  ${direction}"
+  # echo "length: ...........  ${length}"
+  # echo "is_inclusive: .....  ${is_inclusive}"
+  # echo "step: .............  ${step}"
+
+}
+
+
+# -----------------------------------------------------------------------------
+# Draws tick marks as ruler along the horizontal axis
+# Globals:
+#   TTUI_HORIZONTAL_RULER_TICK
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+ttui::draw::horizontal_ruler() {
+  local TERM_WIDTH=$(ttui::get_term_width force)
+  local counter=1
+  for ((i=0; i < TERM_WIDTH; i++)); do
+    if [[ ${counter} == 10 ]]; then
+      echo -n "${TTUI_HORIZONTAL_RULER_TICK}"
+      counter=1
+    else
+      echo -n ' '
+      (( counter++ ))
+    fi
+  done
+  echo
+}
+
+
+
+# -----------------------------------------------------------------------------
+# 
+# Globals:
+#   TBD
+# Arguments:
+#   TBD
+# -----------------------------------------------------------------------------
+ttui::draw::vertical_line() {
+  # here to line#
+  # line# to line#
+  echo bash doesnt allow functions with no statements
 }
 
 
