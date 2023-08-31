@@ -1518,6 +1518,13 @@ ttui::draw::horizontal_line() {
               esac
               continue
               ;;
+            at)
+              $(ttui::utils::is_uint $VAL) && {
+                LINE_NOT_SPECIFIED=false
+                line=$VAL
+              }
+              # TODO: handle error -- value must be unsigned int
+              ;;
             length) 
                 $(ttui::utils::is_uint $VAL) && {
                     length=$VAL
@@ -1624,17 +1631,179 @@ ttui::draw::horizontal_ruler() {
 
 
 # -----------------------------------------------------------------------------
-# 
+# Draws vertical line
 # Globals:
 #   TBD
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
 # Arguments:
 #   TBD
 # -----------------------------------------------------------------------------
+#   col#                        draws from current position to specified col# on current line
+#   from=here to=col#           draws from current position to specified col# on current line
+#   at=line# from=col# to-col#  draws from specified col to specified col at specified line
+#   from=col# to=right len=40   draws from specified col specified length to the right 
+#   inclusive=false             does not draw at current coordinate (starts printing at the next line or column)
+#
+#   ttui::draw::horizontal_line from=here to=42
+# -----------------------------------------------------------------------------
+#   TODO: add support for line weights
+#   TODO: refactor line drawing to always be to the right (for simplicity)
+# -----------------------------------------------------------------------------
 ttui::draw::vertical_line() {
-  # here to line#
-  # line# to line#
-  echo bash doesnt allow functions with no statements
+  local start_line=
+  local end_line=
+  local column=
+  local COL_NOT_SPECIFIED=true
+  local use_direction=false
+  local direction=
+  local length=
+  local is_inclusive=true
+  local step=1
+  local GLYPH="${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}"
+
+  for arg in "$@"; do
+
+    [[ $# == 1 ]] && {
+      $(ttui::utils::is_uint $arg) && {
+        # assume we are moving from current line to a specified line# since no '=' is found
+        start_line=$(ttui::cursor::get_line)
+        end_line="${arg}"
+        break
+      }
+      # if we get this far the arg must not be a unsigned int and therefore invalid
+      # TODO: log or print error
+      break
+    }
+    
+    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    # process props
+    local PROP=${arg%=*}
+    local VAL=${arg#*=}
+    
+    # echo "$FUNCNAME --> PROP: $PROP | VAL:$VAL"
+    # if $(ttui::utils::is_uint $_VAL); then
+    #   echo "$_VAL is unsigned int"
+    # else
+    #   echo "$_VAL is NOT an unsigned int"
+    # fi
+
+    case ${PROP} in
+            from)
+              case $VAL in
+                here)
+                  start_line=$(ttui::cursor::get_line)
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    start_line=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            to) 
+              case $VAL in
+                up)
+                  use_direction=true
+                  direction="up"
+                  ;;
+                down)
+                  use_direction=true
+                  direction="down"
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    end_line=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            at)
+              $(ttui::utils::is_uint $VAL) && {
+                COL_NOT_SPECIFIED=false
+                column=$VAL
+              }
+              # TODO: handle error -- value must be unsigned int
+              ;;
+            length) 
+                $(ttui::utils::is_uint $VAL) && {
+                    length=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                ;;
+            inclusive)
+              case $VAL in
+                true)
+                  is_inclusive=true
+                  ;;
+                false)
+                  is_inclusive=false
+                  ;;
+                  # TODO: handle unknown value error
+                # *) # handle error
+              esac
+              continue
+              ;;
+            *) echo "Unknown parameter passed: ${PROP}"
+                # exit 1
+                ;;
+    esac
+  done
+
+  [[ $COL_NOT_SPECIFIED == true ]] && {
+    column=$(ttui::cursor::get_column)
+  }
+
+  [[ $use_direction == true ]] && {
+    if $(ttui::utils::is_uint $length); then
+      if [[ $direction == "down" ]]; then
+        (( end_line = start_line + length ))
+        local TERM_HEIGHT=$(ttui::get_term_height)
+        [[ $end_line -gt $TERM_HEIGHT ]] && end_line=$TERM_HEIGHT
+      else
+        # up
+        (( end_line = start_line - length ))
+        [[ $end_line -lt 1 ]] && end_line=1
+      fi
+    else
+      #error
+      echo "length must be unsigned int" 2>/dev/null # throwing this away for now
+    fi
+  }
+
+  # draw line
+  if [[ end_line -lt start_line ]]; then
+    # draw upward
+    for ((line = $start_line; line >= $end_line; line--)); do
+      ttui::cursor::move_to $line $column
+      printf "${GLYPH}"
+    done
+    
+  else
+    # draw downward
+    for ((line = $start_line; line <= $end_line; line++)); do
+      ttui::cursor::move_to $line $column
+      printf "${GLYPH}"
+    done
+  fi
+  
+  # place cursor back onto the logical ending position
+  ttui::cursor::move_up 
+
+  echo "start_line: .........  ${start_line}"
+  echo "end_line: ...........  ${end_line}"
+  echo "column: .............  ${column}"
+  echo "COL_NOT_SPECIFIED: ..  ${LINE_NOT_SPECIFIED}"
+  echo "direction: ..........  ${direction}"
+  echo "length: .............  ${length}"
+  echo "is_inclusive: .......  ${is_inclusive}"
+  echo "step: ...............  ${step}"
+
 }
+
 
 
 ttui::initialize() {
