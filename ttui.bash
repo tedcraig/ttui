@@ -908,7 +908,7 @@ ttui::draw::horizontal_line() {
   for arg in "$@"; do
 
     [[ $# == 1 ]] && {
-      $(ttui::utils::is_unit $arg) && {
+      $(ttui::utils::is_uint $arg) && {
         # assume we are moving from current col to a specified col# since no '=' is found
         start_col=$(ttui::cursor::get_column)
         end_col="${arg}"
@@ -1020,7 +1020,7 @@ ttui::draw::horizontal_line() {
       ttui::cursor::move_to $line $col
       printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
     done
-    ttui::cursor::move_left 2 # to place cursor in the logical ending position
+    
   else
     # draw towards right
     for ((col = $start_col; col <= $end_col; col++)); do
@@ -1028,7 +1028,10 @@ ttui::draw::horizontal_line() {
       printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
     done
   fi
-
+  
+  # place cursor back onto the logical ending position
+  ttui::cursor::move_left 
+  
   # echo
   # ttui::cursor::move_down
   # ttui::cursor::move_left 999
