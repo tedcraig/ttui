@@ -1853,17 +1853,51 @@ ttui::utils::epoch_time_ms() {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is an unsigned float
+# returns code 1 if arg is an integer
 # Globals:
 #   none
 # Arguments:
 #   $1) value to be tested
 # -----------------------------------------------------------------------------
-ttui::utils::is_ufloat() {
+# ttui::utils::is_float() { 
+#   # TODO: refactor using bash pattern matching
+#   $(ttui::utils::is_int $1) && {
+#     return 0
+#   }
+#   $(ttui::utils::is_num $1) && {
+#     return 1
+#   }
+# }
+
+
+# -----------------------------------------------------------------------------
+# returns code 1 if arg is an integer
+# Globals:
+#   none
+# Arguments:
+#   $1) value to be tested
+# -----------------------------------------------------------------------------
+ttui::utils::is_int() { 
   case ${1#[-+]} in 
-    ''|.|*[!0-9.]*|*.*.*) 
+    ''|*[!0-9]*) 
       return 1
-      ;; 
+      ;;
+  esac
+}
+
+
+# -----------------------------------------------------------------------------
+# returns code 1 if arg is a number
+# Globals:
+#   none
+# Arguments:
+#   $1) value to be tested
+# -----------------------------------------------------------------------------
+ttui::utils::is_num()  { 
+  case ${1#[-+]} in 
+    '' | . | *[!0-9.]* | *.*.* ) 
+    return 1
+    ;; 
   esac
 }
 
@@ -1904,6 +1938,22 @@ ttui::utils::is_uint() {
     ''|*[!0-9]*)
       return 1
       ;;
+  esac
+}
+
+
+# -----------------------------------------------------------------------------
+# returns code 1 if arg is an unsigned number
+# Globals:
+#   none
+# Arguments:
+#   $1) value to be tested
+# -----------------------------------------------------------------------------
+ttui::utils::is_unum() {
+  case $1 in 
+    ''|.|*[!0-9.]*|*.*.*) 
+      return 1
+      ;; 
   esac
 }
 
