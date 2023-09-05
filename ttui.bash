@@ -1774,6 +1774,18 @@ ttui::draw::vertical_line() {
     fi
   }
 
+  # a few debug values used during dev
+  echo "start_line: .........  ${start_line}"
+  echo "end_line: ...........  ${end_line}"
+  echo "column: .............  ${column}"
+  echo "COL_NOT_SPECIFIED: ..  ${COL_NOT_SPECIFIED}"
+  echo "use_direction: ......  ${use_direction}"
+  echo "direction: ..........  ${direction}"
+  echo "length: .............  ${length}"
+  echo "is_inclusive: .......  ${is_inclusive}"
+  echo "step: ...............  ${step}"
+
+
   # draw line
   if [[ end_line -lt start_line ]]; then
     # draw upward
@@ -1791,16 +1803,9 @@ ttui::draw::vertical_line() {
   fi
   
   # place cursor back onto the logical ending position
-  ttui::cursor::move_up 
+  ttui::cursor::move_left
 
-  echo "start_line: .........  ${start_line}"
-  echo "end_line: ...........  ${end_line}"
-  echo "column: .............  ${column}"
-  echo "COL_NOT_SPECIFIED: ..  ${LINE_NOT_SPECIFIED}"
-  echo "direction: ..........  ${direction}"
-  echo "length: .............  ${length}"
-  echo "is_inclusive: .......  ${is_inclusive}"
-  echo "step: ...............  ${step}"
+
 
 }
 
@@ -1859,15 +1864,16 @@ ttui::utils::epoch_time_ms() {
 # Arguments:
 #   $1) value to be tested
 # -----------------------------------------------------------------------------
-# ttui::utils::is_float() { 
-#   # TODO: refactor using bash pattern matching
-#   $(ttui::utils::is_int $1) && {
-#     return 0
-#   }
-#   $(ttui::utils::is_num $1) && {
-#     return 1
-#   }
-# }
+ttui::utils::is_float() { 
+  case ${1#[-+]} in 
+    '' | . | *[!0-9.]* | *.*.* ) 
+      return 1
+      ;; 
+    *[0-9]*.*[0-9])
+      return 0
+  esac
+  return 1
+}
 
 
 # -----------------------------------------------------------------------------
@@ -1922,7 +1928,7 @@ ttui::utils::is_num()  {
 #
 #   BASH_IS_NIFTY=true
 #   VAR=42
-#   [[ $BASH_IS_NIFTY == true && $(ttui::util::is_uint $VAR) == 1 ]] && echo "$VAR is an unsigned integer"
+#   [[ $BASH_IS_NIFTY == true && $(ttui::util::is_uint $VAR) == 0 ]] && echo "$VAR is an unsigned integer"
 #   # OUTPUT --> 42 is an unsigned integer
 #
 #   VAR="blahblah"
