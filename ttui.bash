@@ -1429,6 +1429,270 @@ ttui::draw::box() {
 
 
 # -----------------------------------------------------------------------------
+# Draws box of specified width and height at the current cursor location 
+# or from specified anchor point.
+# Assumes space is available -- will overwrite pre-existings characters
+# Globals:
+#   ttui::cursor::get_column()
+#   ttui::cursor::get_line()
+#   ttui::cursor::move_right()
+#   ttui::cursor::move_to()
+#   ttui::cursor::move_up()
+#   ttui::logger::log()
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
+# Arguments:
+#   $1  : width of box  (including border)
+#   $2  : height of box (including border)
+#  [$3] : anchor column (upper left corner location)
+#  [$4] : anchor line   (upper left corner location)
+# -----------------------------------------------------------------------------
+ttui::draw::box_v2() {
+  # width, height, upperLeftX, upperLeftY
+  ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
+  ttui::logger::log "$# arguments received"
+  local expanded_args=$(echo "$@")
+  ttui::logger::log "args received: $expanded_args"
+
+  local width="$1"
+  ttui::logger::log "width:  ${width}"
+
+  local height="$2"
+  ttui::logger::log "height: ${height}"
+
+  local anchor_column=$(ttui::cursor::get_column force)
+    [[ $# -gt 2 ]] && {
+      anchor_column=$3
+    }
+  ttui::logger::log "anchor_column: ${anchor_column}"
+
+  local anchor_line=$(ttui::cursor::get_line) # no need for 'force' here since we already forced get_column
+    [[ $# -gt 3 ]] && {
+      anchor_line="$4"
+    }
+  ttui::logger::log "anchor_line: ${anchor_line}"
+
+  local current_column=
+  local current_line=
+
+  ## wborder params
+  ## 	0. ls: character to be used for the left side of the window 
+  ## 	1. rs: character to be used for the right side of the window 
+  ## 	2. ts: character to be used for the top side of the window 
+  ## 	3. bs: character to be used for the bottom side of the window 
+  ## 	4. tl: character to be used for the top left corner of the window 
+  ## 	5. tr: character to be used for the top right corner of the window 
+  ## 	6. bl: character to be used for the bottom left corner of the window 
+  ## 	7. br: character to be used for the bottom right corner of the window
+
+  # local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
+  # local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
+  # local top_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
+  # local bottom_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
+  local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+  local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+  local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+  local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
+  
+  ## dev debug stuff
+
+  # ttui::logger::log "left_side:            ${left_side}"
+  # ttui::logger::log "right_side:           ${right_side}"
+  # ttui::logger::log "top_side:             ${top_side}"
+  # ttui::logger::log "bottom_side:          ${bottom_side}"
+  # ttui::logger::log "top_left_corner:      ${top_left_corner}"
+  # ttui::logger::log "top_right_corner:     ${top_right_corner}"
+  # ttui::logger::log "bottom_left_corner:   ${bottom_left_corner}"
+  # ttui::logger::log "bottom_right_corner:  ${bottom_right_corner}"
+  # ttui::logger::log "box sample:"
+  # ttui::logger::log "${top_left_corner}${top_side}${top_side}${top_side}${top_side}${top_side}${top_side}${top_right_corner}"
+  # ttui::logger::log "${left_side}      ${right_side}"
+  # ttui::logger::log "${left_side}      ${right_side}"
+  # ttui::logger::log "${bottom_left_corner}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_right_corner}"
+
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+  
+  ## insert mode:
+  ## print empty lines to make room
+  # expand='{1..'"${height}"'}'
+  # rep="printf '%.0s\\n' ${expand}"
+  # ttui::logger::log "$rep"
+  # eval "${rep}"
+
+  echo
+  ttui::cursor::move_up $((height + 1))
+
+  current_line=$(ttui::cursor::get_line force)
+  ttui::cursor::move_to "${current_line}" "${anchor_column}"
+  # top left corner
+  printf "${top_left_corner}"
+
+  # repeat top char width - 2 times (to account for corners)
+  printf -vch  "%$((width - 2))s"
+  printf "%s" "${ch// /$top_side}"
+  
+  # top right corner
+  printf "${top_right_corner}"
+
+  # local height_counter=1
+  # printf " ${height_counter}"
+
+  # left and right sides
+  for (( r=1; r<=height - 2; r++ )); do 
+    (( current_line++ ))
+    ttui::cursor::move_to "${current_line}" "${anchor_column}"
+    printf "${left_side}"
+    ttui::cursor::move_right $((width - 2))
+    printf "${right_side}"
+  done
+
+  ## move to bottom line of the box  
+  (( current_line++ ))
+  ttui::cursor::move_to "${current_line}" "${anchor_column}"
+
+  ## draw bottom of box
+  printf "${bottom_left_corner}"
+  ## repeat bottom char width - 2 times (to account for corners)
+  printf -vch  "%$((width - 2))s" ""
+  printf "%s" "${ch// /$bottom_side}"
+  printf "${bottom_right_corner}"
+  echo
+
+  ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
+}
+
+
+# -----------------------------------------------------------------------------
+# Draws corner glyph
+# Globals:
+#   TBD
+#   TTUI_WBORDER_SINGLE_SQUARED_LIGHT (array of border glyphs)
+# Arguments:
+#   tl | topleft | tr | topright | bl | bottomleft | br | bottomright
+#   type=<tl | topleft | tr | topright | bl | bottomleft | br | bottomright>
+#  [corner=<square|round>]
+#  [style=<singleline>]
+#  [weight=<light>]
+# -----------------------------------------------------------------------------
+#   TODO: add support for coordinates
+#   TODO: add support for colors
+# -----------------------------------------------------------------------------
+ttui::draw::corner() {
+  local TYPE="unspecified"  # "orientation" is prob more accurate term but too long for user to type
+  local TYPE_IS_SET=false
+  local STYLE="singleline"
+  local CORNER="square"
+  local WEIGHT="light"
+  local GLYPH="none"
+
+  local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+  local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+  local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+  local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
+
+  # process prop arguments
+  for arg in "$@"; do
+    
+    [[ "${arg}" != *"="* ]] && {
+      # assume this must be the orientation / TYPE if no '=' is found
+      TYPE="${arg}"
+      continue
+    }
+
+    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    local PROP=${arg%=*}
+    local VAL=${arg#*=}
+    
+    # echo "$FUNCNAME --> PROP: $PROP | VAL:$VAL"
+    # if $(ttui::utils::is_uint $_VAL); then
+    #   echo "$_VAL is unsigned int"
+    # else
+    #   echo "$_VAL is NOT an unsigned int"
+    # fi
+
+    case ${PROP} in
+        type)
+            # case $VAL in
+            #     topleft | tl | upperleft | ul)
+            #         TYPE="topleft"
+            #         ;;
+            #     topright | tr | upperright | ur)
+            #         TYPE="topright"
+            #         ;;
+            #     bottomleft | bl | lowerleft | ll)
+            #         TYPE="bottomleft"
+            #         ;;
+            #     bottomright | br | lowerright | lr)
+            #         TYPE="bottomright"
+            #         ;;
+            #     *) # unrecognized type
+            # esac
+            TYPE=$VAL
+            ;;
+        style) 
+            STYLE=$VAL
+            ;;
+        weight)
+            WEIGHT=$VAL
+            ;;
+        corner) 
+            CORNER=$VAL
+            ;;
+        *) ttui::utils::printerr "${FUNCNAME}: Unknown parameter passed: ${PROP}"
+            # exit 1
+            ;;
+    esac
+  done
+
+
+  # assign appropriate glyph based on TYPE property
+  case $TYPE in
+      topleft | tl | upperleft | ul)
+          [[ $STYLE == "singleline" && $WEIGHT == "light" && $CORNER == "square" ]] && {
+            GLYPH=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+          }
+          TYPE_IS_SET=true
+          ;;
+      topright | tr | upperright | ur)
+          [[ $STYLE == "singleline" && $WEIGHT == "light" && $CORNER == "square" ]] && {
+            GLYPH=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+          }
+          TYPE_IS_SET=true
+          ;;
+      bottomleft | bl | lowerleft | ll)
+          [[ $STYLE == "singleline" && $WEIGHT == "light" && $CORNER == "square" ]] && {
+            GLYPH=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+          }
+          TYPE_IS_SET=true
+          ;;
+      bottomright | br | lowerright | lr)
+          [[ $STYLE == "singleline" && $WEIGHT == "light" && $CORNER == "square" ]] && {
+            GLYPH=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
+          }
+          TYPE_IS_SET=true
+          ;;
+      # *)  # unrecognized type
+      #     ;;
+  esac
+
+  # abort if type is not set
+  [[ $TYPE_IS_SET == false ]] && {
+    ttui::utils::printerr "${FUNCNAME}: unable to print corner.  valid TYPE must be specified in order for corner glyph to be determined"
+    return 1
+  }
+
+  # print the corner glyph
+  printf "${GLYPH}"
+
+}
+
+
+# -----------------------------------------------------------------------------
 # Draws horizontal line
 # Globals:
 #   TBD
@@ -1655,8 +1919,8 @@ ttui::draw::vertical_line() {
   local column=
   local COL_NOT_SPECIFIED=true
   local use_direction=false
-  local direction=
-  local length=
+  local direction="auto"
+  local length="auto"
   local is_inclusive=true
   local step=1
   local GLYPH="${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}"
@@ -1775,15 +2039,15 @@ ttui::draw::vertical_line() {
   }
 
   # a few debug values used during dev
-  echo "start_line: .........  ${start_line}"
-  echo "end_line: ...........  ${end_line}"
-  echo "column: .............  ${column}"
-  echo "COL_NOT_SPECIFIED: ..  ${COL_NOT_SPECIFIED}"
-  echo "use_direction: ......  ${use_direction}"
-  echo "direction: ..........  ${direction}"
-  echo "length: .............  ${length}"
-  echo "is_inclusive: .......  ${is_inclusive}"
-  echo "step: ...............  ${step}"
+  # echo "start_line: .........  ${start_line}"
+  # echo "end_line: ...........  ${end_line}"
+  # echo "column: .............  ${column}"
+  # echo "COL_NOT_SPECIFIED: ..  ${COL_NOT_SPECIFIED}"
+  # echo "use_direction: ......  ${use_direction}"
+  # echo "direction: ..........  ${direction}"
+  # echo "length: .............  ${length}"
+  # echo "is_inclusive: .......  ${is_inclusive}"
+  # echo "step: ...............  ${step}"
 
 
   # draw line
@@ -1982,6 +2246,18 @@ ttui::utils::is_unum() {
       return 1
       ;; 
   esac
+}
+
+
+# -----------------------------------------------------------------------------
+#   prints to stderr
+# Globals:
+#   none
+# Arguments:
+#   *) string(s) to be printed to stderr
+# -----------------------------------------------------------------------------
+ttui::utils::printerr() {
+	echo $@ >&2
 }
 
 
