@@ -1871,6 +1871,7 @@ ttui::utils::is_float() {
       ;; 
     *[0-9]*.*[0-9])
       return 0
+      ;;
   esac
   return 1
 }
@@ -1905,6 +1906,26 @@ ttui::utils::is_num()  {
     return 1
     ;; 
   esac
+}
+
+
+# -----------------------------------------------------------------------------
+# returns code 0 if arg is an unsigned float
+# Globals:
+#   none
+# Arguments:
+#   $1) value to be tested
+# -----------------------------------------------------------------------------
+ttui::utils::is_ufloat() { 
+  case $1 in 
+    '' | . | *[!0-9.]* | *.*.* ) 
+      return 1
+      ;; 
+    *[0-9]*.*[0-9])
+      return 0
+      ;;
+  esac
+  return 1
 }
 
 
