@@ -1858,7 +1858,7 @@ ttui::utils::epoch_time_ms() {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is an integer
+# returns code 0 if arg is a float
 # Globals:
 #   none
 # Arguments:
@@ -1877,7 +1877,7 @@ ttui::utils::is_float() {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is an integer
+# returns code 0 if arg is an integer
 # Globals:
 #   none
 # Arguments:
@@ -1893,7 +1893,7 @@ ttui::utils::is_int() {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is a number
+# returns code 0 if arg is a number
 # Globals:
 #   none
 # Arguments:
@@ -1909,7 +1909,7 @@ ttui::utils::is_num()  {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is an unsigned integer
+# returns code 0 if arg is an unsigned integer
 # Globals:
 #   none
 # Arguments:
@@ -1949,7 +1949,7 @@ ttui::utils::is_uint() {
 
 
 # -----------------------------------------------------------------------------
-# returns code 1 if arg is an unsigned number
+# returns code 0 if arg is an unsigned number
 # Globals:
 #   none
 # Arguments:
