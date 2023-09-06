@@ -1429,6 +1429,8 @@ ttui::draw::box() {
 
 
 # -----------------------------------------------------------------------------
+# >>>>> WIP -- DO ONT USE <<<<<<
+#
 # Draws box of specified width and height at the current cursor location 
 # or from specified anchor point.
 # Assumes space is available -- will overwrite pre-existings characters
@@ -1459,17 +1461,20 @@ ttui::draw::box_v2() {
   local height="$2"
   ttui::logger::log "height: ${height}"
 
-  local anchor_column=$(ttui::cursor::get_column force)
+  local anchor_column=$(ttui::cursor::get_column)
     [[ $# -gt 2 ]] && {
       anchor_column=$3
     }
   ttui::logger::log "anchor_column: ${anchor_column}"
 
-  local anchor_line=$(ttui::cursor::get_line) # no need for 'force' here since we already forced get_column
+  local anchor_line=$(ttui::cursor::get_line from_cache) # use 'from_cache' here since prev get_column call already populated the global line value
     [[ $# -gt 3 ]] && {
       anchor_line="$4"
     }
   ttui::logger::log "anchor_line: ${anchor_line}"
+
+  local bottom_right_line=
+  local bottom_right_column=
 
   local current_column=
   local current_line=
@@ -1488,10 +1493,10 @@ ttui::draw::box_v2() {
   # local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
   # local top_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
   # local bottom_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
-  local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
-  local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
-  local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
-  local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
+  # local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
+  # local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
+  # local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
+  # local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
   
   ## dev debug stuff
 
@@ -1524,44 +1529,39 @@ ttui::draw::box_v2() {
   # ttui::logger::log "$rep"
   # eval "${rep}"
 
-  echo
-  ttui::cursor::move_up $((height + 1))
+  # echo
+  # ttui::cursor::move_up $((height + 1))
 
-  current_line=$(ttui::cursor::get_line force)
+  current_line=$(ttui::cursor::get_line)
   ttui::cursor::move_to "${current_line}" "${anchor_column}"
   # top left corner
-  printf "${top_left_corner}"
+  ttui::draw::corner topleft
 
-  # repeat top char width - 2 times (to account for corners)
-  printf -vch  "%$((width - 2))s"
-  printf "%s" "${ch// /$top_side}"
+  # top line
+  ttui::cursor::move_right
+  ttui::draw::horizontal_line from=here to=right length=$((width - 1))
   
   # top right corner
-  printf "${top_right_corner}"
+  ttui::draw::corner topright
 
-  # local height_counter=1
-  # printf " ${height_counter}"
+  # draw right side
+  ttui::cursor::move_down  
+  ttui::draw::vertical_line from=here to=down length=$((height - 1))
 
-  # left and right sides
-  for (( r=1; r<=height - 2; r++ )); do 
-    (( current_line++ ))
-    ttui::cursor::move_to "${current_line}" "${anchor_column}"
-    printf "${left_side}"
-    ttui::cursor::move_right $((width - 2))
-    printf "${right_side}"
-  done
+  # bottom right corner
+  ttui::draw::corner bottomright
 
-  ## move to bottom line of the box  
-  (( current_line++ ))
-  ttui::cursor::move_to "${current_line}" "${anchor_column}"
+  # bottom line
+  ttui::cursor::move_left
+  ttui::draw::horizontal_line from=here to=left length=$((width - 1))
 
-  ## draw bottom of box
-  printf "${bottom_left_corner}"
-  ## repeat bottom char width - 2 times (to account for corners)
-  printf -vch  "%$((width - 2))s" ""
-  printf "%s" "${ch// /$bottom_side}"
-  printf "${bottom_right_corner}"
-  echo
+  # bottom left corner
+  ttui::draw::corner bottomleft
+
+  # left side
+  ttui::cursor::move_up
+  # printf "$((height - 2))" # debug marker
+  ttui::draw::vertical_line from=here to=up length=$((height - 2))  
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
@@ -1688,6 +1688,9 @@ ttui::draw::corner() {
 
   # print the corner glyph
   printf "${GLYPH}"
+  
+  # move cursor back over the printed glyph
+  ttui::cursor::move_left
 
 }
 
@@ -1821,12 +1824,12 @@ ttui::draw::horizontal_line() {
   [[ $use_direction == true ]] && {
     if $(ttui::utils::is_uint $length); then
       if [[ $direction == "right" ]]; then
-        (( end_col = start_col + length ))
+        (( end_col = start_col + length - 1 ))
         local TERM_WIDTH=$(ttui::get_term_width)
         [[ $end_col -gt $TERM_WIDTH ]] && end_col=$TERM_WIDTH
       else
         # left
-        (( end_col = start_col - length ))
+        (( end_col = start_col - length + 1 ))
         [[ $end_col -lt 1 ]] && end_col=1
       fi
     else
@@ -2024,12 +2027,12 @@ ttui::draw::vertical_line() {
   [[ $use_direction == true ]] && {
     if $(ttui::utils::is_uint $length); then
       if [[ $direction == "down" ]]; then
-        (( end_line = start_line + length ))
+        (( end_line = start_line + length - 1 ))
         local TERM_HEIGHT=$(ttui::get_term_height)
         [[ $end_line -gt $TERM_HEIGHT ]] && end_line=$TERM_HEIGHT
       else
         # up
-        (( end_line = start_line - length ))
+        (( end_line = start_line - length + 1 ))
         [[ $end_line -lt 1 ]] && end_line=1
       fi
     else
@@ -2038,17 +2041,31 @@ ttui::draw::vertical_line() {
     fi
   }
 
-  # a few debug values used during dev
-  # echo "start_line: .........  ${start_line}"
-  # echo "end_line: ...........  ${end_line}"
-  # echo "column: .............  ${column}"
-  # echo "COL_NOT_SPECIFIED: ..  ${COL_NOT_SPECIFIED}"
-  # echo "use_direction: ......  ${use_direction}"
-  # echo "direction: ..........  ${direction}"
-  # echo "length: .............  ${length}"
-  # echo "is_inclusive: .......  ${is_inclusive}"
-  # echo "step: ...............  ${step}"
-
+  #### a few debug values used during dev
+  # ttui::cursor::move_to_bottom
+  # DEBUG_START_LINE=$(( $(ttui::cursor::get_line) - 8))
+  # DEBUG_START_COL=80
+  # ttui::cursor::move_to $DEBUG_START_LINE $DEBUG_START_COL
+  # echo -n "start_line: .........  ${start_line}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 1)) $DEBUG_START_COL
+  # echo -n "end_line: ...........  ${end_line}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 2)) $DEBUG_START_COL
+  # echo -n "column: .............  ${column}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 3)) $DEBUG_START_COL
+  # echo -n "COL_NOT_SPECIFIED: ..  ${COL_NOT_SPECIFIED}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 4)) $DEBUG_START_COL
+  # echo -n "use_direction: ......  ${use_direction}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 5)) $DEBUG_START_COL
+  # echo -n "direction: ..........  ${direction}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 6)) $DEBUG_START_COL
+  # echo -n "length: .............  ${length}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 7)) $DEBUG_START_COL
+  # echo -n "is_inclusive: .......  ${is_inclusive}"
+  # ttui::cursor::move_to $((DEBUG_START_LINE + 8)) $DEBUG_START_COL
+  # echo -n "step: ...............  ${step}"
+  # ttui::cursor::move_to_bottom
+  # ttui::cursor::move_left 999
+  ####
 
   # draw line
   if [[ end_line -lt start_line ]]; then
