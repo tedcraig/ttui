@@ -136,60 +136,6 @@ trap 'ttui::handle_exit' EXIT
 
 
 # -----------------------------------------------------------------------------
-# Enables debug logs.
-# Globals:
-#   ttui_debug_logs_enabled
-# Arguments:
-#   none
-# -----------------------------------------------------------------------------
-ttui::logger::enable_logging() {
-  TTUI_LOGGING_ENABLED=true
-  ttui::logger::log "debug mode enabled"
-}
-
-
-# -----------------------------------------------------------------------------
-# Disables debug logs.
-# Globals:
-#   ttui_debug_logs_enabled
-# Arguments:
-#   none
-# -----------------------------------------------------------------------------
-ttui::logger::disable_logging() {
-  TTUI_LOGGING_ENABLED=false
-}
-
-
-# -----------------------------------------------------------------------------
-# Print debug messages if debug mode is enabled.
-# Globals:
-#   ttui_debug_logs_enabled
-# Arguments:
-#   message
-# -----------------------------------------------------------------------------
-ttui::logger::log() {
-  [[ "${TTUI_LOGGING_ENABLED}" == false ]] && return
-  [[ "${TTUI_THIS_IS_FIRST_LOG}" == true ]] && {
-    echo " " >> "${TTUI_LOG_FILENAME}"
-    echo "-------------------------------------------------------------------------------" >> "${TTUI_LOG_FILENAME}"
-    echo "  LAUNCHED      ${TIMESTAMP_AT_LAUNCH}" >> "${TTUI_LOG_FILENAME}"
-    echo "-------------------------------------------------------------------------------" >> "${TTUI_LOG_FILENAME}"
-    echo " " >> "${TTUI_LOG_FILENAME}"
-    TTUI_THIS_IS_FIRST_LOG=false
-    }
-  local caller="${FUNCNAME[1]}"
-  local self="${FUNCNAME[0]}"
-  local message="$1"
-  [[ "$#" == 0 ]] && message="no message argument provided to ${self}"
-  echo "[ ${caller} ]--> ${message}" >> "${TTUI_LOG_FILENAME}"
-}
-
-
-# ttui::log() {
-  
-# }
-
-# -----------------------------------------------------------------------------
 # Get the current operating system type
 # Globals:
 #   TTUI_OS
@@ -1081,8 +1027,11 @@ ttui::cursor::get_position() {
 # Function Calls:
 #   ttui::cursor::get_position
 # Arguments:
-#   $1) force - if string "force" is received, cursor::get_position will be called
-#               before echoing result
+#   $1) from_cache - result will be echoed from global var TTUI_CURRENT_COLUMN 
+#       without reinvoking cursor::get_position()
+#       **NOTE** this feature will NOT work if function is being called within
+#       a command substitution
+#               
 # -----------------------------------------------------------------------------
 ttui::cursor::get_column() {
   [[ "$1" == "from_cache" ]] && {
@@ -1102,8 +1051,10 @@ ttui::cursor::get_column() {
 # Function Calls:
 #   ttui::cursor::get_position
 # Arguments:
-#   $1) force - if string "force" is received, cursor::get_position will be called
-#               before echoing result
+#   $1) from_cache - result will be echoed from global var TTUI_CURRENT_LINE 
+#       without reinvoking cursor::get_position()
+#       **NOTE** this feature will NOT work if function is being called within
+#       a command substitution
 # -----------------------------------------------------------------------------
 ttui::cursor::get_line() {
   [[ "$1" == "from_cache" ]] && {
@@ -1462,22 +1413,39 @@ ttui::draw::box_v2() {
   ttui::logger::log "height: ${height}"
 
   local anchor_column=$(ttui::cursor::get_column)
-    [[ $# -gt 2 ]] && {
-      anchor_column=$3
-    }
+  [[ $# -gt 2 ]] && {
+    anchor_column=$3
+  }
   ttui::logger::log "anchor_column: ${anchor_column}"
 
   local anchor_line=$(ttui::cursor::get_line from_cache) # use 'from_cache' here since prev get_column call already populated the global line value
-    [[ $# -gt 3 ]] && {
-      anchor_line="$4"
-    }
+  [[ $# -gt 3 ]] && {
+    anchor_line="$4"
+  }
   ttui::logger::log "anchor_line: ${anchor_line}"
 
-  local bottom_right_line=
   local bottom_right_column=
+  local bottom_right_line=
 
   local current_column=
   local current_line=
+
+  #### debug info
+  # echo "args:           $expanded_args"
+  # echo "width:          $width"
+  # echo "height:         $height"
+  # echo "anchor_column:  $anchor_column"
+  # echo "anchor_line:    $anchor_line"
+  # echo "ttui::cursor::get_line from_cache --> $(ttui::cursor::get_line from_cache)"
+  # echo -n "col=\$(ttui::cursor::get_column) --> col: "
+  # local col=$(ttui::cursor::get_column)
+  # echo "$col"
+  # echo "TTUI_CURRENT_COLUMN: $TTUI_CURRENT_COLUMN"
+  # echo "TTUI_CURRENT_LINE:   $TTUI_CURRENT_LINE"
+  # echo -n "ttui::cursor::get_line from_cache --> "
+  # ttui::cursor::get_line from_cache
+  # echo "TTUI_CURRENT_LINE:   $TTUI_CURRENT_LINE"
+  # compgen -A variable
 
   ## wborder params
   ## 	0. ls: character to be used for the left side of the window 
@@ -1488,39 +1456,6 @@ ttui::draw::box_v2() {
   ## 	5. tr: character to be used for the top right corner of the window 
   ## 	6. bl: character to be used for the bottom left corner of the window 
   ## 	7. br: character to be used for the bottom right corner of the window
-
-  # local left_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
-  # local right_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
-  # local top_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
-  # local bottom_side=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
-  # local top_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
-  # local top_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
-  # local bottom_left_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
-  # local bottom_right_corner=${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[7]}
-  
-  ## dev debug stuff
-
-  # ttui::logger::log "left_side:            ${left_side}"
-  # ttui::logger::log "right_side:           ${right_side}"
-  # ttui::logger::log "top_side:             ${top_side}"
-  # ttui::logger::log "bottom_side:          ${bottom_side}"
-  # ttui::logger::log "top_left_corner:      ${top_left_corner}"
-  # ttui::logger::log "top_right_corner:     ${top_right_corner}"
-  # ttui::logger::log "bottom_left_corner:   ${bottom_left_corner}"
-  # ttui::logger::log "bottom_right_corner:  ${bottom_right_corner}"
-  # ttui::logger::log "box sample:"
-  # ttui::logger::log "${top_left_corner}${top_side}${top_side}${top_side}${top_side}${top_side}${top_side}${top_right_corner}"
-  # ttui::logger::log "${left_side}      ${right_side}"
-  # ttui::logger::log "${left_side}      ${right_side}"
-  # ttui::logger::log "${bottom_left_corner}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_side}${bottom_right_corner}"
-
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[0]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[1]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[3]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[4]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[5]}
-  # echo ${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[6]}
   
   ## insert mode:
   ## print empty lines to make room
@@ -1560,8 +1495,12 @@ ttui::draw::box_v2() {
 
   # left side
   ttui::cursor::move_up
-  # printf "$((height - 2))" # debug marker
   ttui::draw::vertical_line from=here to=up length=$((height - 2))  
+  
+  # move cursor to anchor/origin cell as ending position
+  ttui::cursor::move_up
+
+  # printf '*' # debug marker
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
@@ -2121,6 +2060,57 @@ ttui::handle_exit() {
   local TIMESTAMP_AT_EXIT=`date +"%Y-%m-%d %T"`
   ttui::logger::log "Exiting at ${TIMESTAMP_AT_EXIT}"
 }
+
+
+# -----------------------------------------------------------------------------
+# Enables debug logs.
+# Globals:
+#   ttui_debug_logs_enabled
+# Arguments:
+#   none
+# -----------------------------------------------------------------------------
+ttui::logger::enable_logging() {
+  TTUI_LOGGING_ENABLED=true
+  ttui::logger::log "debug mode enabled"
+}
+
+
+# -----------------------------------------------------------------------------
+# Disables debug logs.
+# Globals:
+#   ttui_debug_logs_enabled
+# Arguments:
+#   none
+# -----------------------------------------------------------------------------
+ttui::logger::disable_logging() {
+  TTUI_LOGGING_ENABLED=false
+}
+
+
+# -----------------------------------------------------------------------------
+# Print debug messages if debug mode is enabled.
+# Globals:
+#   ttui_debug_logs_enabled
+# Arguments:
+#   message
+# -----------------------------------------------------------------------------
+ttui::logger::log() {
+  [[ "${TTUI_LOGGING_ENABLED}" == false ]] && return
+  [[ "${TTUI_THIS_IS_FIRST_LOG}" == true ]] && {
+    echo " " >> "${TTUI_LOG_FILENAME}"
+    echo "-------------------------------------------------------------------------------" >> "${TTUI_LOG_FILENAME}"
+    echo "  LAUNCHED      ${TIMESTAMP_AT_LAUNCH}" >> "${TTUI_LOG_FILENAME}"
+    echo "-------------------------------------------------------------------------------" >> "${TTUI_LOG_FILENAME}"
+    echo " " >> "${TTUI_LOG_FILENAME}"
+    TTUI_THIS_IS_FIRST_LOG=false
+    }
+  local caller="${FUNCNAME[1]}"
+  local self="${FUNCNAME[0]}"
+  local message="$1"
+  [[ "$#" == 0 ]] && message="no message argument provided to ${self}"
+  echo "[ ${caller} ]--> ${message}" >> "${TTUI_LOG_FILENAME}"
+}
+
 
 
 # -----------------------------------------------------------------------------
