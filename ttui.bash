@@ -295,9 +295,11 @@ ttui::get_term_size() {
 #               before echoing result
 # -----------------------------------------------------------------------------
 ttui::get_term_width() {
-  [[ "$1" == "force" ]] && {
-    ttui::get_term_size
+  [[ "$1" == "from_cache" ]] && {
+    echo "${TTUI_TERM_COLUMNS}"
+    return
   }
+  ttui::get_term_size
   echo "${TTUI_TERM_COLUMNS}"
 }
 
@@ -313,9 +315,11 @@ ttui::get_term_width() {
 #               before echoing result
 # -----------------------------------------------------------------------------
 ttui::get_term_height() {
-  [[ "$1" == "force" ]] && {
-    ttui::get_term_size
+  [[ "$1" == "from_cache" ]] && {
+    echo "${TTUI_TERM_LINES}"
+    return
   }
+  ttui::get_term_size
   echo "${TTUI_TERM_LINES}"
 }
 
@@ -1229,8 +1233,7 @@ ttui::draw::box() {
   # width, height, upperLeftX, upperLeftY
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   ttui::logger::log "$# arguments received"
-  local expanded_args=$(echo "$@")
-  ttui::logger::log "args received: $expanded_args"
+  ttui::logger::log "args received: $*"
 
   local width="$1"
   ttui::logger::log "width:  ${width}"
@@ -1238,13 +1241,15 @@ ttui::draw::box() {
   local height="$2"
   ttui::logger::log "height: ${height}"
 
-  local anchor_column=$(ttui::cursor::get_column force)
+  local anchor_column=
+  anchor_column=$(ttui::cursor::get_column)
     [[ $# -gt 2 ]] && {
       anchor_column=$3
     }
   ttui::logger::log "anchor_column: ${anchor_column}"
 
-  local anchor_line=$(ttui::cursor::get_line) # no need for 'force' here since we already forced get_column
+  local anchor_line=
+  anchor_line=$(ttui::cursor::get_line)
     [[ $# -gt 3 ]] && {
       anchor_line="$4"
     }
@@ -1309,14 +1314,14 @@ ttui::draw::box() {
   current_line=$(ttui::cursor::get_line force)
   ttui::cursor::move_to "${current_line}" "${anchor_column}"
   # top left corner
-  printf "${top_left_corner}"
+  printf '%s' "${top_left_corner}"
 
   # repeat top char width - 2 times (to account for corners)
   printf -vch  "%$((width - 2))s"
-  printf "%s" "${ch// /$top_side}"
+  printf '%s' "${ch// /$top_side}"
   
   # top right corner
-  printf "${top_right_corner}"
+  printf '%s' "${top_right_corner}"
 
   # local height_counter=1
   # printf " ${height_counter}"
@@ -1325,9 +1330,9 @@ ttui::draw::box() {
   for (( r=1; r<=height - 2; r++ )); do 
     (( current_line++ ))
     ttui::cursor::move_to "${current_line}" "${anchor_column}"
-    printf "${left_side}"
+    printf '%s' "${left_side}"
     ttui::cursor::move_right $((width - 2))
-    printf "${right_side}"
+    printf '%s' "${right_side}"
   done
 
   ## move to bottom line of the box  
@@ -1339,7 +1344,7 @@ ttui::draw::box() {
   ## repeat bottom char width - 2 times (to account for corners)
   printf -vch  "%$((width - 2))s" ""
   printf "%s" "${ch// /$bottom_side}"
-  printf "${bottom_right_corner}"
+  printf '%s' "${bottom_right_corner}"
   echo
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
@@ -1370,8 +1375,7 @@ ttui::draw::box_v2() {
   # width, height, upperLeftX, upperLeftY
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
   ttui::logger::log "$# arguments received"
-  local expanded_args=$(echo "$@")
-  ttui::logger::log "args received: $expanded_args"
+  ttui::logger::log "args received: $*"
 
   local left_column="none"
   local top_line="none"
@@ -1396,7 +1400,7 @@ ttui::draw::box_v2() {
   for arg in "$@"; do
 
     [[ $# -lt 2 ]] && {
-      ttui::utils::printerr "$FUNCNAME: unable to draw box: not enough property args provided to define box dimensions"
+      ttui::utils::printerr "${FUNCNAME[0]}: unable to draw box: not enough property args provided to define box dimensions"
     }
 
     [[ $# == 2 && $1 != *"="* && $2 != *"="* ]] && {
@@ -1404,6 +1408,7 @@ ttui::draw::box_v2() {
         # assume top left is current cursor position and that $1 and $2 are width and height
         width="$1"
         height="$2"
+        # left_column=$(ttui::cursor::get_column)
         left_column=$(ttui::cursor::get_column)
         top_line=$(ttui::cursor::get_line)
         right_column=$((left_column + width - 1))
@@ -1436,73 +1441,52 @@ ttui::draw::box_v2() {
     # fi
 
     case ${PROP} in
-            from)
-              case $VAL in
-                here)
-                  left_column=$(ttui::cursor::get_column)
-                  top_line=$(ttui::cursor::get_line)
-                  ;;
-                *)
-                  $(ttui::utils::is_uint $VAL) && {
-                    start_col=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                  ;;
-              esac
-              continue
-              ;;
-            to) 
-              case $VAL in
-                left)
-                  use_direction=true
-                  direction="left"
-                  ;;
-                right)
-                  use_direction=true
-                  direction="right"
-                  ;;
-                *)
-                  $(ttui::utils::is_uint $VAL) && {
-                    end_col=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                  ;;
-              esac
-              continue
-              ;;
-            at)
-              $(ttui::utils::is_uint $VAL) && {
-                LINE_NOT_SPECIFIED=false
-                line=$VAL
-              }
-              # TODO: handle error -- value must be unsigned int
-              ;;
-            length) 
-                $(ttui::utils::is_uint $VAL) && {
-                    length=$VAL
-                  }
-                  # TODO: handle error -- value must be unsigned int
-                ;;
-            inclusive)
-              case $VAL in
-                true)
-                  is_inclusive=true
-                  ;;
-                false)
-                  is_inclusive=false
-                  ;;
-                  # TODO: handle unknown value error
-                # *) # handle error
-              esac
-              continue
-              ;;
-            *) echo "Unknown parameter passed: ${PROP}"
-                # exit 1
-                ;;
+      from)
+        case $VAL in
+          here)
+            left_column=$(ttui::cursor::get_column)
+            top_line=$(ttui::cursor::get_line)
+            ;;
+          *)
+            local start_line=${VAL%","*}
+            local start_col=${VAL#*","}
+            $(ttui::utils::is_uint $top_line) && $(ttui::utils::is_uint $start_col) && {
+              top_line=$start_line
+              left_column=$start_col
+            }
+            # TODO: handle error -- value must be unsigned int
+            ;;
+        esac
+        continue
+        ;;
+      to) 
+        local end_line=${VAL%","*}
+        local end_col=${VAL#*","}
+        $(ttui::utils::is_uint $end_line) && $(ttui::utils::is_uint $end_col) && {
+          bottom_line=$end_line
+          right_column=$end_col
+          continue
+        }
+        # TODO: handle error -- value must be unsigned int
+        continue
+        ;;
+      width)
+        $(ttui::utils::is_uint $VAL) && {
+          width=$VAL
+        }
+        # TODO: handle error -- value must be unsigned int
+        ;;
+      height) 
+        $(ttui::utils::is_uint $VAL) && {
+            height=$VAL
+          }
+          # TODO: handle error -- value must be unsigned int
+        ;;
+      *) echo "Unknown parameter passed: ${PROP}"
+          # exit 1
+          ;;
     esac
   done
-
-
 
   local bottom_right_column=
   local bottom_right_line=
@@ -1511,11 +1495,11 @@ ttui::draw::box_v2() {
   local current_line=
 
   #### debug info
-  echo "args:           $expanded_args"
-  echo "width:          $width"
-  echo "height:         $height"
-  echo "left_column:  $left_column"
-  echo "top_line:    $top_line"
+  # echo "args:           $expanded_args"
+  # echo "width:          $width"
+  # echo "height:         $height"
+  # echo "left_column:    $left_column"
+  # echo "top_line:       $top_line"
   # echo "ttui::cursor::get_line from_cache --> $(ttui::cursor::get_line from_cache)"
   # echo -n "col=\$(ttui::cursor::get_column) --> col: "
   # local col=$(ttui::cursor::get_column)
@@ -1580,7 +1564,7 @@ ttui::draw::box_v2() {
   # move cursor to anchor/origin cell as ending position
   ttui::cursor::move_up
 
-  # printf '*' # debug marker
+  printf '*' # debug marker
 
   ttui::logger::log "${TTUI_EXECUTION_COMPLETE_DEBUG_MSG}"
 }
