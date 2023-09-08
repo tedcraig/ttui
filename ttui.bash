@@ -939,79 +939,46 @@ ttui::cursor::restore_position() {
 # -----------------------------------------------------------------------------
 ttui::cursor::get_position() {
   ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
-  ttui::logger::log "$# arguments received"
-  local expanded_args=$(echo "$@")
-  ttui::logger::log "args received: $expanded_args"
-  
+
   # save the current/default IFS delimeter(s) in order to restore later
   local old_ifs="$IFS"
   
-  # assign line and column nums -------------------------------------------------
-  #   if more than one arg exists, then try to assign values to variables
-  #   of the same name.
-  #   else assign values to default global variable.
-  if [[ $# -gt 1 ]]; then
-    ttui::logger::log "1st arg found: $1"
-    ttui::logger::log "2nd arg found: $2"
-    # check if the string value of myVar is the name of a declared variable
-    local lineVarName="$1"
-    local bLineVarExists=false
-    local test='if ${'"${lineVarName}"'+"false"}; then ttui::logger::log "${lineVarName} not defined"; else bLineVarExists=true; ttui::logger::log "${lineVarName} is defined"; fi'
-    ttui::logger::log "test: $test"
-    eval $test
-    ttui::logger::log  "bLineVarExists: ${bLineVarExists}"
+  # assign line and column nums
+  IFS='[;' read -p $'\e[6n' -d R -rs _ TTUI_CURRENT_LINE TTUI_CURRENT_COLUMN
+  #\_____/ \__/ \_________/ \__/ \_/ \_____________________________________/
+  #   |     |       |        |    |                    |
+  #   |     |       |        |    |     Variables to receive output of read,
+  #   |     |       |        |    |     as parsed by the IFS delimeters.
+  #   |     |       |        |    |     pattern of response to parse: 
+  #   |     |       |        |    |         ^[Ignore[Lines;ColumnsR
+  #   |     |       |        |    |     var:  -
+  #   |     |       |        |    |         receives superfluous value
+  #   |     |       |        |    |         parsed between [ and [
+  #   |     |       |        |    |     var:  LINE_NUM_VAR
+  #   |     |       |        |    |         receives line number value
+  #   |     |       |        |    |         parsed between [ and ;
+  #   |     |       |        |    |     var:  COLUMN_NUM_VAR
+  #   |     |       |        |    |         receives column number value
+  #   |     |       |        |    |         parsed between ; and R
+  #   |     |       |        |     ╲
+  #   |     |       |        |  Do not treat a Backslash as an escape character.
+  #   |     |       |        |  Silent mode: any characters input from the terminal
+  #   |     |       |        |  are not echoed.
+  #   |     |       |         ╲
+  #   |     |       |     Terminates the input line at R rather than at newline 
+  #   |     |        ╲
+  #   |     |     Prints '\e[6n' as prompt to console.
+  #   |     |     This term command escape code is immediately interpted, generating
+  #   |     |     response code containing the line and column position
+  #   |     |     in format: ^[[1;2R  (where num at position 1 is the line number
+  #   |     |     and num at position 2 is the column number). This response string
+  #   |     |     becomes the input of the read command.
+  #   |      ╲
+  #   |     Read input from console
+  #    ╲
+  #   Overrides default delimeters for output of the read.
+  #   Will capture values between [ and/or ; chars
 
-    local columnVarName="$2"
-    local bColumnVarExists=false
-    local test='if ${'"${columnVarName}"'+"false"}; then ttui::logger::log "${columnVarName} not defined"; else bColumnVarExists=true; ttui::logger::log "${columnVarName} is defined"; fi'
-    ttui::logger::log "test: $test"
-    eval $test
-    ttui::logger::log  "bColumnVarExists: ${bColumnVarExists}"
-
-    if [[ $bLineVarExists == true ]] && [[ $bColumnVarExists == true ]]; then
-      local assignment="IFS='[;' read -p $'\e[6n' -d R -rs _ ${lineVarName} ${columnVarName}"
-      #                 \______/ \__/ \_________/ \__/ \_/ \___________________________/
-      #                    |      |       |        |    |                |
-      #                    |      |       |        |    |  Variables to receive output of read,
-      #                    |      |       |        |    |  as parsed by the IFS delimeters.
-      #                    |      |       |        |    |  ^[ThrowAway[Lines;ColumnsR
-      #                    |      |       |        |    |  var:  -
-      #                    |      |       |        |    |     receives superfluous value
-      #                    |      |       |        |    |     parsed between [ and [
-      #                    |      |       |        |    |  var:  LINE_NUM_VAR
-      #                    |      |       |        |    |     receives line number value
-      #                    |      |       |        |    |     parsed between [ and ;
-      #                    |      |       |        |    |  var:  COLUMN_NUM_VAR
-      #                    |      |       |        |    |     receives column number value
-      #                    |      |       |        |    |     parsed between ; and R
-      #                    |      |       |        |     \
-      #                    |      |       |        |  Do not treat a Backslash as an escape character.
-      #                    |      |       |        |  Silent mode: any characters input from the terminal
-      #                    |      |       |        |  are not echoed.
-      #                    |      |       |        |
-      #                    |      |       |  Terminates the input line at R rather than at newline 
-      #                    |      |       |
-      #                    |      |  Prints '\e[6n' as prompt to console.
-      #                    |      |  This term command escape code is immediately interpted, generating
-      #                    |      |  response code containing the line and column position
-      #                    |      |  in format: ^[[1;2R  (where num at position 1 is the line number
-      #                    |      |  and num at position 2 is the column number). This response string
-      #                    |      |  becomes the input of the read command.
-      #                    |      |
-      #                    |  Read input from console
-      #                    |
-      #                  Overrides default delimeters for output of the read.
-      #                  Will capture values between [ and/or ; chars
-      ttui::logger::log  "assignment: ${assignment}"
-      eval $assignment
-    else
-      echo "${FUNCNAME[0]} --> warning: cannot assign cursor position values to provided var names: ${lineVarName} and/or ${columnVarName}: undelcared or invalid variable"
-    fi
-  else
-    ttui::logger::log "no var name provided. Assigning cursor position values to global vars TTUI_CURRENT_LINE TTUI_CURRENT_COLUMN"
-    IFS='[;' read -p $'\e[6n' -d R -rs _ TTUI_CURRENT_LINE TTUI_CURRENT_COLUMN
-  fi
-  
   # reset delimeters to original/default value
   IFS="${old_ifs}"
 
@@ -1396,8 +1363,8 @@ ttui::draw::box() {
 # Arguments:
 #   $1  : width of box  (including border)
 #   $2  : height of box (including border)
-#  [$3] : anchor column (upper left corner location)
-#  [$4] : anchor line   (upper left corner location)
+#  [$3] : left column (upper left corner location)
+#  [$4] : top line   (upper left corner location)
 # -----------------------------------------------------------------------------
 ttui::draw::box_v2() {
   # width, height, upperLeftX, upperLeftY
@@ -1406,23 +1373,136 @@ ttui::draw::box_v2() {
   local expanded_args=$(echo "$@")
   ttui::logger::log "args received: $expanded_args"
 
-  local width="$1"
-  ttui::logger::log "width:  ${width}"
+  local left_column="none"
+  local top_line="none"
+  local right_column="none"
+  local bottom_line="none"
+  local width="none"
+  local height="none"
 
-  local height="$2"
-  ttui::logger::log "height: ${height}"
+  # left_column=$(ttui::cursor::get_column)
+  # [[ $# -gt 2 ]] && {
+  #   left_column=$3
+  # }
+  # ttui::logger::log "left_column: ${left_column}"
 
-  local anchor_column=$(ttui::cursor::get_column)
-  [[ $# -gt 2 ]] && {
-    anchor_column=$3
-  }
-  ttui::logger::log "anchor_column: ${anchor_column}"
+  # local top_line=$(ttui::cursor::get_line)
+  # [[ $# -gt 3 ]] && {
+  #   top_line="$4"
+  # }
+  # ttui::logger::log "top_line: ${top_line}"
 
-  local anchor_line=$(ttui::cursor::get_line from_cache) # use 'from_cache' here since prev get_column call already populated the global line value
-  [[ $# -gt 3 ]] && {
-    anchor_line="$4"
-  }
-  ttui::logger::log "anchor_line: ${anchor_line}"
+  # process args
+  for arg in "$@"; do
+
+    [[ $# -lt 2 ]] && {
+      ttui::utils::printerr "$FUNCNAME: unable to draw box: not enough property args provided to define box dimensions"
+    }
+
+    [[ $# == 2 && $1 != *"="* && $2 != *"="* ]] && {
+      $(ttui::utils::is_uint $1) && $(ttui::utils::is_uint $2) && {
+        # assume top left is current cursor position and that $1 and $2 are width and height
+        width="$1"
+        height="$2"
+        left_column=$(ttui::cursor::get_column)
+        top_line=$(ttui::cursor::get_line)
+        right_column=$((left_column + width - 1))
+        bottom_line=$((top_line + height - 1))
+        [[  $TTUI_LOGGING_ENABLED == true ]] && {
+          ttui::logger::log "width:         ${width}"
+          ttui::logger::log "height:        ${height}"
+          ttui::logger::log "left_column:   ${left_column}"
+          ttui::logger::log "top_line:      ${top_line}"
+          ttui::logger::log "right_column:  ${right_column}"
+          ttui::logger::log "bottom_line:   ${bottom_line}"
+        }
+        break # skip any further args processing
+      }
+      # if we get this far the arg must not be an unsigned integer and therefore invalid
+      # TODO: log or print error
+      break
+    }
+    
+    # if we get to this point, we are expecting args to have the form PROPERTY=VALUE
+    # process props
+    local PROP=${arg%=*}
+    local VAL=${arg#*=}
+    
+    # echo "$FUNCNAME --> PROP: $PROP | VAL:$VAL"
+    # if $(ttui::utils::is_uint $_VAL); then
+    #   echo "$_VAL is unsigned int"
+    # else
+    #   echo "$_VAL is NOT an unsigned int"
+    # fi
+
+    case ${PROP} in
+            from)
+              case $VAL in
+                here)
+                  left_column=$(ttui::cursor::get_column)
+                  top_line=$(ttui::cursor::get_line)
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    start_col=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            to) 
+              case $VAL in
+                left)
+                  use_direction=true
+                  direction="left"
+                  ;;
+                right)
+                  use_direction=true
+                  direction="right"
+                  ;;
+                *)
+                  $(ttui::utils::is_uint $VAL) && {
+                    end_col=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                  ;;
+              esac
+              continue
+              ;;
+            at)
+              $(ttui::utils::is_uint $VAL) && {
+                LINE_NOT_SPECIFIED=false
+                line=$VAL
+              }
+              # TODO: handle error -- value must be unsigned int
+              ;;
+            length) 
+                $(ttui::utils::is_uint $VAL) && {
+                    length=$VAL
+                  }
+                  # TODO: handle error -- value must be unsigned int
+                ;;
+            inclusive)
+              case $VAL in
+                true)
+                  is_inclusive=true
+                  ;;
+                false)
+                  is_inclusive=false
+                  ;;
+                  # TODO: handle unknown value error
+                # *) # handle error
+              esac
+              continue
+              ;;
+            *) echo "Unknown parameter passed: ${PROP}"
+                # exit 1
+                ;;
+    esac
+  done
+
+
 
   local bottom_right_column=
   local bottom_right_line=
@@ -1431,11 +1511,11 @@ ttui::draw::box_v2() {
   local current_line=
 
   #### debug info
-  # echo "args:           $expanded_args"
-  # echo "width:          $width"
-  # echo "height:         $height"
-  # echo "anchor_column:  $anchor_column"
-  # echo "anchor_line:    $anchor_line"
+  echo "args:           $expanded_args"
+  echo "width:          $width"
+  echo "height:         $height"
+  echo "left_column:  $left_column"
+  echo "top_line:    $top_line"
   # echo "ttui::cursor::get_line from_cache --> $(ttui::cursor::get_line from_cache)"
   # echo -n "col=\$(ttui::cursor::get_column) --> col: "
   # local col=$(ttui::cursor::get_column)
@@ -1468,7 +1548,7 @@ ttui::draw::box_v2() {
   # ttui::cursor::move_up $((height + 1))
 
   current_line=$(ttui::cursor::get_line)
-  ttui::cursor::move_to "${current_line}" "${anchor_column}"
+  ttui::cursor::move_to "${current_line}" "${left_column}"
   # top left corner
   ttui::draw::corner topleft
 
@@ -1664,6 +1744,8 @@ ttui::draw::horizontal_line() {
   local is_inclusive=true
   local step=1
 
+  # echo "args: $@"
+
   for arg in "$@"; do
 
     [[ $# == 1 ]] && {
@@ -1764,6 +1846,7 @@ ttui::draw::horizontal_line() {
     if $(ttui::utils::is_uint $length); then
       if [[ $direction == "right" ]]; then
         (( end_col = start_col + length - 1 ))
+        # echo "end_col = start_col + length - 1: $end_col"
         local TERM_WIDTH=$(ttui::get_term_width)
         [[ $end_col -gt $TERM_WIDTH ]] && end_col=$TERM_WIDTH
       else
@@ -1780,14 +1863,14 @@ ttui::draw::horizontal_line() {
   # draw line
   if [[ end_col -lt start_col ]]; then
     # draw towards left
-    for ((col = $start_col; col >= $end_col; col--)); do
+    for ((col = start_col; col >= end_col; col--)); do
       ttui::cursor::move_to $line $col
       printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
     done
     
   else
     # draw towards right
-    for ((col = $start_col; col <= $end_col; col++)); do
+    for ((col = start_col; col <= end_col; col++)); do
       ttui::cursor::move_to $line $col
       printf "${TTUI_WBORDER_SINGLE_SQUARED_LIGHT[2]}"
     done
@@ -1799,7 +1882,6 @@ ttui::draw::horizontal_line() {
   # echo
   # ttui::cursor::move_down
   # ttui::cursor::move_left 999
-
   # echo "start_col: ........  ${start_col}"
   # echo "end_col: ..........  ${end_col}"
   # echo "line: .............  ${line}"
@@ -2009,7 +2091,7 @@ ttui::draw::vertical_line() {
   # draw line
   if [[ end_line -lt start_line ]]; then
     # draw upward
-    for ((line = $start_line; line >= $end_line; line--)); do
+    for ((line = start_line; line >= end_line; line--)); do
       ttui::cursor::move_to $line $column
       printf "${GLYPH}"
     done
