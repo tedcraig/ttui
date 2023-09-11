@@ -1213,6 +1213,20 @@ ttui::cursor::move_to_home() {
 
 
 # -----------------------------------------------------------------------------
+# Moves cursor to the left most position: 1 (or 0).
+# Globals:
+#   none
+# Arguments:
+#   none
+# -----------------------------------------------------------------------------
+ttui::cursor::move_to_left() {
+  ttui::logger::log "${TTUI_INVOKED_DEBUG_MSG}"
+  # use a huge number, the cursor will only move as far as the left edge
+  printf '\e[%sD' 999
+}
+
+
+# -----------------------------------------------------------------------------
 # Draws box of specified width and height at the current cursor location 
 # or from specified anchor point.
 # Globals:
@@ -1531,8 +1545,11 @@ ttui::draw::box_v2() {
   # echo
   # ttui::cursor::move_up $((height + 1))
 
-  current_line=$(ttui::cursor::get_line)
-  ttui::cursor::move_to "${current_line}" "${left_column}"
+  ttui::cursor::move_to "${top_line}" "${left_column}"
+
+  # current_line=$(ttui::cursor::get_line)
+  # ttui::cursor::move_to "${current_line}" "${left_column}"
+  
   # top left corner
   ttui::draw::corner topleft
 

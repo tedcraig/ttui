@@ -1,0 +1,1035 @@
+#! /usr/bin/env bash
+
+# =============================================================================
+#
+#   name:   ttui_tester
+#   auth:   ted craig
+#
+#   desc:   Invokes features of ttui_lib library script in order to demonstrate
+#           the libraries functionality during development.
+#
+#   dependancies: ttui_lib.sh
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Global Vars
+# -----------------------------------------------------------------------------
+readonly FULL_PATH_TO_SCRIPT="$(which "$0")"
+readonly PATH_TO_SCRIPT="$(dirname "$0")"
+readonly BASENAME="$(basename "$0")"
+
+# echo "                 ▁▂▃▄"
+# echo "         ▁▂▃▄▅▆▇█████"
+# echo " ▁▂▃▄▅▆▇█████████████"
+# echo "001122334455667788991"
+# echo "050505050505050505050"
+# echo "                    0"
+# echo
+readonly LEVEL_BARS_TOP="                 ▁▂▃▄"
+readonly LEVEL_BARS_MID="         ▁▂▃▄▅▆▇█████"
+readonly LEVEL_BARS_BOT=" ▁▂▃▄▅▆▇█████████████"
+
+LINES=
+COLUMNS=
+
+# -----------------------------------------------------------------------------
+# Imports
+# -----------------------------------------------------------------------------
+source $TTUI/ttui.bash # make sure $TTUI environment variable is set
+
+
+# Set the output volume to 50%
+# § sudo osascript -e 'set volume output volume 50 Input volume and Alert volume can also be set from 0 to 100%:
+# $ sudo osascript -e 'set volume input volume 40°
+# $ sudo osascript -e 'set volume alert volume 75'
+
+
+
+
+# -----------------------------------------------------------------------------
+#   print_level_bars
+# -----------------------------------------------------------------------------
+print_level_bars() {
+  # ESC[38;2;⟨r⟩;⟨g⟩;⟨b⟩ m Select RGB foreground color
+  # ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩ m Select RGB background color
+
+echo
+echo
+echo
+
+ttui::cursor::move_up 2
+ttui::cursor::move_left 9999
+
+local rgb=
+local lightness=60
+local chroma=
+local hue=
+
+for (( i=0; i<${#LEVEL_BARS_TOP}; i++ )); do
+    # local COLOR="\x1b[38;5;$((232 + $i))m"
+    # local COLOR="\x1b[38;2;$i;128;128m"
+    # local COLOR="\033[38;2;0;0;255"
+    local BAR="${LEVEL_BARS_TOP:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}" rgb
+    ttui::logger::log "${rgb[@]}"
+    printf "\033[38;2;%d;%d;%dm$BAR" "${rgb[@]}"
+    # echo -en "${COLOR}${LEVEL_BARS_BOT:$i:1}"
+    # printf "${COLOR}${BAR}"
+  done
+
+ttui::cursor::move_down
+ttui::cursor::move_left 9999
+for (( i=0; i<${#LEVEL_BARS_MID}; i++ )); do
+    # local COLOR="\x1b[38;5;$((232 + $i))m"
+    # local COLOR="\x1b[38;2;$i;128;128m"
+    # local COLOR="\033[38;2;0;0;255"
+    local BAR="${LEVEL_BARS_MID:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}" rgb
+    ttui::logger::log "${rgb[@]}"
+    printf "\033[38;2;%d;%d;%dm$BAR" "${rgb[@]}"
+    # printf "\033[38;2;%d;%d;%dm$BAR" $((i*5)) 64 64;
+    # echo -en "${COLOR}${LEVEL_BARS_BOT:$i:1}"
+    # printf "${COLOR}${BAR}"
+  done
+
+ttui::cursor::move_down
+ttui::cursor::move_left 9999
+for (( i=0; i<${#LEVEL_BARS_BOT}; i++ )); do
+    # local COLOR="\x1b[38;5;$((232 + $i))m"
+    # local COLOR="\x1b[38;2;$i;128;128m"
+    # local COLOR="\033[38;2;0;0;255"
+    local BAR="${LEVEL_BARS_BOT:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}" rgb
+    ttui::logger::log "${rgb[@]}"
+    printf "\033[38;2;%d;%d;%dm$BAR" "${rgb[@]}"
+    # printf "\033[38;2;%d;%d;%dm$BAR" $((i*5)) 64 64;
+    # echo -en "${COLOR}${LEVEL_BARS_BOT:$i:1}"
+    # printf "${COLOR}${BAR}"
+  done  
+  
+  # reset
+  printf "\033[0m"
+
+  # add new line to avoid extraneous '%' added at the end of the lowest line
+  # in zsh and fish shells.
+  printf '\n'
+
+  ttui::cursor::show
+}
+
+
+# -----------------------------------------------------------------------------
+#   print_level_bars_faster
+# -----------------------------------------------------------------------------
+print_level_bars_faster() {
+  # ESC[38;2;⟨r⟩;⟨g⟩;⟨b⟩ m Select RGB foreground color
+  # ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩ m Select RGB background color
+
+echo
+echo
+echo
+
+ttui::cursor::move_up 2
+ttui::cursor::move_left 9999
+
+local rgb=
+local lightness=60
+local chroma=
+local hue=
+
+for (( i=0; i<${#LEVEL_BARS_TOP}; i++ )); do
+    local BAR="${LEVEL_BARS_TOP:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    local rgb=$(ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}")
+    ttui::logger::log "${rgb}"
+    ttui::color::set_color_to_rgb "${rgb}"
+    printf "$BAR"
+  done  
+
+
+ttui::cursor::move_down
+ttui::cursor::move_left 9999
+for (( i=0; i<${#LEVEL_BARS_MID}; i++ )); do
+    local BAR="${LEVEL_BARS_MID:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    local rgb=$(ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}")
+    ttui::logger::log "${rgb}"
+    ttui::color::set_color_to_rgb "${rgb}"
+    printf "$BAR"
+  done  
+
+ttui::cursor::move_down
+ttui::cursor::move_left 9999
+for (( i=0; i<${#LEVEL_BARS_BOT}; i++ )); do
+    local BAR="${LEVEL_BARS_BOT:$i:1}"
+    chroma=$((i * 2))
+    hue=$((160 - i))
+    local rgb=$(ttui::color::get_rgb_from_lch "${lightness}" "$((5 + chroma))" "${hue}")
+    ttui::logger::log "${rgb}"
+    ttui::color::set_color_to_rgb "${rgb}"
+    printf "$BAR"
+  done  
+  
+  # reset
+  ttui::color::reset
+
+  # add new line to avoid extraneous '%' added at the end of the lowest line
+  # in zsh and fish shells.
+  printf '\n'
+
+  ttui::cursor::show
+}
+
+
+# -----------------------------------------------------------------------------
+#   show_active_ttui_vars
+# -----------------------------------------------------------------------------
+show_active_ttui_vars() {
+  echo "${FUNCNAME[0]}"
+  echo
+  for _VAR in $(compgen -A variable "TTUI"); do
+    echo "  ${_VAR}"
+  done
+
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    build_enum
+# -----------------------------------------------------------------------------
+test::build_enum() {
+  echo "${FUNCNAME[0]}"
+  ENUM=(
+    OK_INDEX
+    CANCEL_INDEX
+    ERROR_INDEX
+    CONFIRM_INDEX
+    SAVE_INDEX
+    EXIT_INDEX
+  ) && build_enum "${ENUM[@]}"
+
+  echo "  OK_INDEX = "$OK_INDEX
+  echo "  CANCEL_INDEX = "$CANCEL_INDEX
+  echo "  ERROR_INDEX = "$ERROR_INDEX
+  echo "  CONFIRM_INDEX = "$CONFIRM_INDEX
+  echo "  SAVE_INDEX = "$SAVE_INDEX
+  echo "  EXIT_INDEX = "$EXIT_INDEX
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    compare_get_rgb_from_lch
+#
+#   ** do NOT use!!! **
+#   no longer two versions of this function to compare
+# -----------------------------------------------------------------------------
+test::compare_get_rgb_from_lch() {
+  echo "${FUNCNAME[0]}"
+
+  local elapsed_time_old=
+  local elapsed_time_new=
+  local old_start=
+  local old_end=
+  local new_start=
+  local new_end=
+  local RGB_new=
+
+  ttui::color::get_rgb_from_lch_faster 52 88 60
+
+  old_start=$(ttui::utils::epochtime_ms)
+  MY_VAR=
+  ttui::color::get_rgb_from_lch  52 88 60 MY_VAR
+  old_end=$(ttui::utils::epochtime_ms)
+
+  new_start=$(ttui::utils::epochtime_ms)
+  RGB_new=$(ttui::color::get_rgb_from_lch_faster 52 88 60)
+  new_end=$(ttui::utils::epochtime_ms)
+
+  # echo "old_start: $old_start | old_end: $old_end"
+  echo "old RGB from LCH: ${MY_VAR[@]} | elapsed: $((old_end - old_start))"
+  echo "new RGB from LCH: ${RGB_new} | elapsed: $((new_end - new_start))"
+
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    compare_lch_to_rgb_conversion
+#
+#   ** do NOT use!!! **
+#   no longer two versions of this function to compare
+# -----------------------------------------------------------------------------
+test::compare_lch_to_rgb_conversion() {
+  
+  echo "${FUNCNAME[0]}"
+  
+  local MY_VAR=
+
+  for (( hue = 60; hue < 100; hue = hue + 10 )); do
+    ttui::color::get_rgb_from_lch 52 80 60 MY_VAR
+    RGB_new=$(ttui::color::get_rgb_from_lch_faster 52 80 ${hue})
+    ttui::color::set_color_to_rgb "${MY_VAR[@]}"
+    echo -n "  old RGB from LCH (52 80 ${hue}): ${MY_VAR[@]}"
+    ttui::cursor::move_to $(ttui::cursor::get_line force) 40
+    ttui::color::set_color_to_rgb ${RGB_new}
+    echo "  |  new RGB from LCH (52 80 ${hue}): ${RGB_new}"
+    ttui::color::reset
+  done
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    draw_box
+# -----------------------------------------------------------------------------
+test::draw_box() {
+  ttui::logger::log "calling draw_box with args: 40, 20"
+  ttui::draw_box 40 5
+  echo
+  ttui::color::set_color_to_rgb 200 50 200
+  ttui::draw_box 60 10
+  
+  ttui::color::reset
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    draw_box2
+# -----------------------------------------------------------------------------
+#   $1  : width of box  (including border)
+#   $2  : height of box (including border)
+#  [$3] : anchor column (upper left corner location)
+#  [$4] : anchor line   (upper left corner location)
+test::draw_box_v2() {
+  # make space for the box.  include markers on right side indicating these
+  #   spaces were generated here.
+  echo "                                                             db2-1"
+  echo "                                                             db2-2"
+  echo "                                                             db2-3"
+  echo "                                                             db2-4"
+  echo -n "                                                             db2-5"
+
+  # move cursor back into position on the left margin
+  ttui::cursor::move_left 999
+
+  ttui::logger::log "ttui::draw::box_v2 40 5"
+  ttui::cursor::move_up 4
+  ttui::color::set_color_to_rgb 200 50 200
+  ttui::draw::box_v2 from=here width=40 height=5
+  ttui::cursor::move_down 5
+  echo
+  # ttui::color::set_color_to_rgb 200 50 200
+  # ttui::draw::box2 60 10
+  ttui::color::reset
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    draw corner
+# -----------------------------------------------------------------------------
+#
+#   TODO:  needs more thorough testing
+#
+# -----------------------------------------------------------------------------
+test::draw_corner() {
+  echo "ttui::draw::corner ..."
+  ttui::color::set_color_to_rgb 255 255 0
+  ttui::draw::corner topleft
+  ttui::cursor::move_right 2
+  ttui::color::set_color_to_rgb 50 255 50
+  ttui::draw::corner topright
+  echo
+  ttui::color::set_color_to_rgb 255 0 255
+  ttui::draw::corner bottomleft
+  ttui::cursor::move_right 2
+  ttui::color::set_color_to_rgb 0 100 255
+  ttui::draw::corner bottomright
+  ttui::color::reset
+  echo
+
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    draw horizontal line
+# -----------------------------------------------------------------------------
+#   properties that can be passed as parameters:
+#
+#     col#
+#     from=here to=col#
+#     from=col# to=right len=40
+#     inclusive=false (does not draw at current coordinate; starts printing at the next line or column)
+#   
+#   examples:
+#
+#     ttui::draw::horizontal_line from=here to=42
+# -----------------------------------------------------------------------------
+test::draw_horizontal_line() {
+  local start=5
+  local end=30
+  echo "ttui::draw::horizontal_line from=$start to=$end"
+  ttui::draw::horizontal_line from=$start to=$end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local start=50
+  local end=15
+  echo "ttui::draw::horizontal_line from=$start to=$end"
+  ttui::draw::horizontal_line from=$start to=$end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+  
+  echo
+  local start=65
+  local end=1
+  echo "ttui::draw::horizontal_line from=$start to=$end"
+  ttui::draw::horizontal_line from=$start to=$end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+  
+  echo
+  local start=here
+  local end=40
+  echo "ttui::draw::horizontal_line from=$start to=$end"
+  ttui::draw::horizontal_line from=$start to=$end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local end=70
+  echo "ttui::draw::horizontal_line $end"
+  ttui::draw::horizontal_line $end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local end=70
+  echo "ttui::cursor::move_right 29"
+  echo "ttui::draw::horizontal_line $end"
+  ttui::cursor::move_right 29
+  ttui::draw::horizontal_line $end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local end=1
+  echo "ttui::cursor::move_right 39"
+  echo "ttui::draw::horizontal_line $end"
+  ttui::cursor::move_right 39
+  ttui::draw::horizontal_line $end
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+
+  echo
+  local start=40
+  local direction="left"
+  local len=30
+  echo "ttui::draw::horizontal_line from=$start to=$direction length=$len"
+  ttui::draw::horizontal_line from=$start to=$direction length=$len
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local start=50
+  local direction="left"
+  local len=100
+  echo "ttui::draw::horizontal_line from=$start to=$direction length=$len"
+  ttui::draw::horizontal_line from=$start to=$direction length=$len
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  echo
+  local start=25
+  local direction="right"
+  local len=45
+  echo "ttui::draw::horizontal_line from=$start to=$direction length=$len"
+  ttui::draw::horizontal_line from=$start to=$direction length=$len
+  printf '*'
+  echo
+  ttui::draw::horizontal_ruler
+
+  local start=10
+  local direction="right"
+  local len=70
+  local CURRENT_LINE=$(ttui::cursor::get_line)
+  local line=$((CURRENT_LINE - 3))
+  echo "ttui::color::set_color_to_rgb 0 255 0"
+  echo "ttui::draw::horizontal_line from=$start to=$direction length=$len at=$line"
+  ttui::color::set_color_to_rgb 0 255 0
+  ttui::draw::horizontal_line from=$start to=$direction length=$len at=$line
+  printf '*'
+  ttui::color::reset
+  ttui::cursor::move_to_bottom
+  ttui::cursor::move_left 999
+  ttui::draw::horizontal_ruler
+  echo
+
+  echo
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    draw vertical line
+# -----------------------------------------------------------------------------
+test::draw_vertical_line() {
+  local BOTTOM_LINE=$(ttui::get_term_height)
+  local start=$BOTTOM_LINE
+  local end=$((BOTTOM_LINE - 4))
+  local col=51
+  echo "draw vertical line from $start to $end at=$col"
+  ttui::color::set_color_to_rgb 0 0 255
+  ttui::draw::vertical_line from=$start to=$end at=$col
+  printf '*'
+  ttui::color::reset
+  echo
+
+  BOTTOM_LINE=$(ttui::get_term_height)
+  start=$((BOTTOM_LINE - 10))
+  end=$((BOTTOM_LINE - 2))
+  col=61
+  echo "draw vertical line from $start to $end at=$col"
+  ttui::color::set_color_to_rgb 0 0 255
+  ttui::draw::vertical_line from=$start to=$end at=$col
+  printf '*'
+  ttui::color::reset
+  echo
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    epoch time milliseconds
+# -----------------------------------------------------------------------------
+test::epochtime_ms() {
+  ttui::utils::epoch_time_ms
+  wait 100
+  ttui::utils::epoch_time_ms
+}
+
+
+
+# -----------------------------------------------------------------------------
+#   TEST    escape code global constants
+# -----------------------------------------------------------------------------
+test::escape_code_constants() {
+  printf "${TTUI_MOVE_CURSOR_UP_ONE_LINE}${TTUI_MOVE_CURSOR_UP_ONE_LINE}\
+  ${TTUI_MOVE_CURSOR_RIGHT_ONE_COL}${TTUI_MOVE_CURSOR_RIGHT_ONE_COL}${TTUI_MOVE_CURSOR_RIGHT_ONE_COL}H\
+  ${TTUI_MOVE_CURSOR_DOWN_ONE_LINE}${TTUI_MOVE_CURSOR_LEFT_ONE_COL}I\
+  ${TTUI_MOVE_CURSOR_DOWN_ONE_LINE}${TTUI_MOVE_CURSOR_LEFT_ONE_COL}!\n"
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    get_color_escape_code_rgb
+# -----------------------------------------------------------------------------
+test::get_color_escape_code_rgb() {
+  echo "get_escape_code_for_rgb --> no var name sent:"
+  ttui::color::get_escape_code_for_rgb ${MY_VAR[0]} ${MY_VAR[1]} ${MY_VAR[2]}
+  echo -e "${TTUI_COLOR_RGB}THIS SHOULD BE COLORED\033[0m"
+  echo
+  SOME_RGB_COLOR_ESCAPE_CODE=
+  echo "get_escape_code_for_rgb --> SOME_RGB_COLOR_ESCAPE_CODE var name sent:"
+  ttui::color::get_escape_code_for_rgb  52 88 120 SOME_RGB_COLOR_ESCAPE_CODE
+  echo -e "${SOME_RGB_COLOR_ESCAPE_CODE}THIS SHOULD BE COLORED\033[0m"
+  echo
+  SOME_OTHER_RGB_COLOR_EC=
+  echo "get_escape_code_for_rgb --> using RGB vals from MY_VAR & SOME_RGB_COLOR_ESCAPE_CODE var name sent:"
+  ttui::color::get_escape_code_for_rgb ${MY_VAR[0]} ${MY_VAR[1]} ${MY_VAR[2]} SOME_OTHER_RGB_COLOR_EC
+  echo -e "${SOME_OTHER_RGB_COLOR_EC}THIS SHOULD BE COLORED\033[0m"
+  echo
+  echo "reset_color:"
+  ttui::color::reset
+  echo "THIS SHOULD BE DEFAULT COLOR"
+  echo
+}
+
+
+
+# -----------------------------------------------------------------------------
+#   TEST    get_color_rgb_from_lch
+# -----------------------------------------------------------------------------
+test::get_rgb_from_lch() {
+  echo "${FUNCNAME[0]}"
+  # Lightness Chroma Hue
+  local RGB=$(ttui::color::get_rgb_from_lch  52 88 40)
+  ttui::color::set_color_to_rgb ${RGB}
+  echo "  TTUI_COLOR_RGB_FROM_LCH: ${TTUI_COLOR_RGB_FROM_LCH}"
+  echo "  local RGB:               ${RGB}"
+  echo
+  RGB=$(ttui::color::get_rgb_from_lch  52 100 120)
+  ttui::color::set_color_to_rgb ${RGB}
+  echo "  TTUI_COLOR_RGB_FROM_LCH: ${TTUI_COLOR_RGB_FROM_LCH}"
+  echo "  local RGB:               ${RGB}"
+  echo
+  RGB=$(ttui::color::get_rgb_from_lch  52 40 200)
+  ttui::color::set_color_to_rgb ${RGB}
+  echo "  TTUI_COLOR_RGB_FROM_LCH: ${TTUI_COLOR_RGB_FROM_LCH}"
+  echo "  local RGB:               ${RGB}"
+
+  ttui::color::reset
+  
+}
+
+
+
+# -----------------------------------------------------------------------------
+#   TEST    get_lch_from_rgb
+# -----------------------------------------------------------------------------
+test::get_lch_from_rgb() {
+  echo "${FUNCNAME[0]}"
+  local LCH=$(ttui::color::get_lch_from_rgb 202 92 0)
+  echo "  RGB: 202 92 0 --> LCH: ${LCH}"
+
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    is float
+# -----------------------------------------------------------------------------
+test::is_float() {
+  echo " test:  ttui::utils::is_float"
+
+    
+  # local VAL=10.50
+  # ttui::utils::is_float $VAL
+  
+  local VAL=10.50
+  if $(ttui::utils::is_float $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  local VAL=-43.21
+  if $(ttui::utils::is_float $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+  
+  VAL=1000
+  if $(ttui::utils::is_float $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  VAL=-300
+  if $(ttui::utils::is_float $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  VAL="FOOBAR"
+  if $(ttui::utils::is_float $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+    VAL="123A"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  VAL="100.2A"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+    VAL="12.3.4"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  VAL="100.2.A"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+
+  VAL="-23456.2256"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is float"
+  else
+    echo "$VAL is NOT a float"
+  fi
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    is unsigned float
+# -----------------------------------------------------------------------------
+test::is_ufloat() {
+  echo " test:  ttui::utils::is_ufloat"
+
+    
+  # local VAL=10.50
+  # ttui::utils::is_float $VAL
+  
+  local VAL=10.50
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  local VAL=-43.21
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+  
+  VAL=1000
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  VAL=-300
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  VAL="FOOBAR"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+    VAL="123A"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  VAL="100.2A"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+    VAL="12.3.4"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  VAL="100.2.A"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+
+  VAL="23456.2256"
+  if $(ttui::utils::is_ufloat $VAL); then
+    echo "$VAL is unsigned float"
+  else
+    echo "$VAL is NOT a unsigned float"
+  fi
+}
+
+
+
+# -----------------------------------------------------------------------------
+#   TEST    is uint
+# -----------------------------------------------------------------------------
+test::is_uint() {
+  echo " test:  ttui::utils::is_uint"
+  local VAL=1000
+  if $(ttui::utils::is_uint $VAL); then
+    echo "$VAL is unsigned int"
+  else
+    echo "$VAL is NOT an unsigned int"
+  fi
+
+  VAL=10.50
+  if $(ttui::utils::is_uint $VAL); then
+    echo "$VAL is unsigned int"
+  else
+    echo "$VAL is NOT an unsigned int"
+  fi
+
+    VAL=-300
+  if $(ttui::utils::is_uint $VAL); then
+    echo "$VAL is unsigned int"
+  else
+    echo "$VAL is NOT an unsigned int"
+  fi
+
+  VAL="FOOBAR"
+  if $(ttui::utils::is_uint $VAL); then
+    echo "$VAL is unsigned int"
+  else
+    echo "$VAL is NOT an unsigned int"
+  fi
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    is int
+# -----------------------------------------------------------------------------
+test::is_int() {
+  echo " test:  ttui::utils::is_int"
+  local VAL=1000
+  if $(ttui::utils::is_int $VAL); then
+    echo "$VAL is int"
+  else
+    echo "$VAL is NOT an int"
+  fi
+
+  VAL=-200
+  if $(ttui::utils::is_int $VAL); then
+    echo "$VAL is int"
+  else
+    echo "$VAL is NOT an int"
+  fi
+
+  VAL=12.34
+  if $(ttui::utils::is_int $VAL); then
+    echo "$VAL is int"
+  else
+    echo "$VAL is NOT an int"
+  fi
+
+  VAL="BAZBIZZ"
+  if $(ttui::utils::is_int $VAL); then
+    echo "$VAL is int"
+  else
+    echo "$VAL is NOT an int"
+  fi
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    is number
+# -----------------------------------------------------------------------------
+test::is_num() {
+  echo " test:  ttui::utils::is_num"
+  local VAL=12.34
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+
+  VAL=100
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+
+  VAL=-4321
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+
+  VAL="ABCD"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+
+  VAL="123A"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+
+  VAL="100.2A"
+  if $(ttui::utils::is_num $VAL); then
+    echo "$VAL is number"
+  else
+    echo "$VAL is NOT a number"
+  fi
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    move_cursor_to
+# -----------------------------------------------------------------------------
+test::move_cursor_to() {
+  ttui::cursor::move_to 1 5
+  ttui::cursor::move_to '' 5
+  ttui::cursor::move_to 1 ''
+  ttui::cursor::move_to - 5
+  ttui::cursor::move_to 1 -
+  ttui::cursor::move_to _ 5
+  ttui::cursor::move_to 1 _
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    get_cursor_position
+# -----------------------------------------------------------------------------
+test::get_cursor_position() {
+  echo "ttui::cursor::get_position: no var passed"
+  ttui::cursor::get_position
+  echo "TTUI_CURRENT_LINE: ${TTUI_CURRENT_LINE} | TTUI_CURRENT_COLUMN: ${TTUI_CURRENT_COLUMN}"
+  echo
+  echo "ttui::cursor::get_position: passing vars LINE and COL"
+  LINE=
+  COL=
+  ttui::cursor::get_position LINE COL
+  echo "LINE: ${LINE} | COL: ${COL}"
+  echo
+  echo "ttui::cursor::get_position: passing only one var (should default to globals)"
+  ONLY_ONE_VAR=
+  ttui::cursor::get_position ONLY_ONE_VAR
+  echo "ONLY_ONE_VAR: ${ONLY_ONE_VAR}"
+  echo "TTUI_CURRENT_LINE: ${TTUI_CURRENT_LINE} | TTUI_CURRENT_COLUMN: ${TTUI_CURRENT_COLUMN}"
+  echo
+  # echo "ttui::cursor::get_position: passing invalid var (should default to globals)"
+  # 6INVALIDVAR=
+  # ttui::cursor::get_position ONLY_ONE_VAR 6INVALIDVAR
+  # echo "ONLY_ONE_VAR: ${ONLY_ONE_VAR}"
+  # echo "TTUI_CURRENT_LINE: ${TTUI_CURRENT_LINE} | TTUI_CURRENT_COLUMN: ${TTUI_CURRENT_COLUMN}"
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    node calls
+# -----------------------------------------------------------------------------
+test::node_calls() {
+  echo "node console log test:"
+  node -e "console.log('hello')"
+  ARCT=$(node -e Math.atan(8 / 10))
+  echo"${ARCT}"
+}
+
+
+# -----------------------------------------------------------------------------
+#   TEST    scrolling
+# -----------------------------------------------------------------------------
+test::scrolling() {
+  ttui::scroll_up
+  ttui::scroll_up
+  ttui::scroll_up
+  sleep 4
+  ttui::scroll_down
+  sleep 1
+  ttui::scroll_down
+  sleep 1
+  ttui::scroll_down
+}
+
+
+# =============================================================================
+#
+#   MAIN
+#
+# =============================================================================
+main() {
+
+  [[ $1 == "debug" ]] && ttui::logger::enable_logging
+
+  ttui::logger::log "basename \$0: $(basename "$0")"
+  ttui::logger::log "dirname \$0: $(dirname "$0")"
+  
+  if [[ "$#" -gt 0 ]]; then
+    ttui::logger::log "$# positional args: $@"
+  else 
+    ttui::logger::log "no positional args passed to script"
+  fi
+
+  ttui::initialize
+
+  ttui::cursor::hide
+
+  ttui::get_term_size
+  echo "${TTUI_TERM_LINES} lines, ${TTUI_TERM_COLUMNS} columns"
+  echo
+
+
+  # print_level_bars  # slow !!
+  print_level_bars_faster
+
+  echo
+  test::get_rgb_from_lch
+
+  echo "TTUI_COLOR_RGB_FROM_LCH: $TTUI_COLOR_RGB_FROM_LCH"
+
+  echo
+  test::get_lch_from_rgb
+
+  # test::draw_box
+
+  # test::build_enum
+
+  # show_active_ttui_vars
+  
+  echo
+  test::draw_horizontal_line
+
+  echo
+  test::draw_vertical_line
+
+  # echo
+  
+  # echo
+  # test::is_uint
+  
+  # echo
+  # test::is_int
+  
+  # echo
+  # test::is_num
+
+  # echo
+  # test::is_float
+
+  # echo
+  # test::is_ufloat
+
+  # echo
+  # ttui::utils::printerr "message printed to stderr"
+
+  echo "                                                             main-1"
+  test::draw_corner
+
+  echo "                                                             main-2"
+  test::draw_box_v2
+
+}
+
+
+main "$@"
