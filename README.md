@@ -152,6 +152,19 @@ cursor_visible
 none
 
 
+
+### ttui::cursor::move_to
+Moves cursor to the specified line and column.
+#### Globals:
+none
+#### Arguments:
+position|desc|type
+--------|----|----
+$1| line number| unsigned integer or '-' or '_'
+$2| column number| unsigned integer or '-' or '_'
+
+
+
 ### ttui::term::clear_screen
 Clears the screen.
 Globals:
